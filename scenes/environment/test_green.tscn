@@ -1,0 +1,164 @@
+[gd_scene load_steps=16 format=3]
+
+[ext_resource type="Script" path="res://scripts/environment/test_green_controller.gd" id="1_controller"]
+[ext_resource type="PackedScene" path="res://scenes/environment/lighting_rig.tscn" id="2_lighting"]
+[ext_resource type="Script" path="res://scripts/environment/green_generator.gd" id="3_green_gen"]
+[ext_resource type="Material" path="res://shaders/putting_green_material.tres" id="4_turf_mat"]
+[ext_resource type="PackedScene" path="res://scenes/environment/golf_flag.tscn" id="5_flag"]
+[ext_resource type="PackedScene" path="res://scenes/environment/golf_ball.tscn" id="6_ball"]
+[ext_resource type="Script" path="res://scripts/gameplay/putting_controller.gd" id="7_putting"]
+[ext_resource type="Script" path="res://scripts/camera/free_look_camera.gd" id="8_camera"]
+[ext_resource type="Script" path="res://scripts/camera/inspection_hud.gd" id="9_hud"]
+[ext_resource type="Script" path="res://scripts/input/udp_ball_receiver.gd" id="10_udp"]
+[ext_resource type="PackedScene" path="res://scenes/xr/xr_player.tscn" id="11_xr"]
+[ext_resource type="Script" path="res://scripts/gameplay/course_manager.gd" id="12_course"]
+[ext_resource type="Script" path="res://scripts/gameplay/match_manager.gd" id="13_match"]
+[ext_resource type="PackedScene" path="res://scenes/ui/game_menu.tscn" id="14_menu"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud"]
+content_margin_left = 20.0
+content_margin_top = 16.0
+content_margin_right = 20.0
+content_margin_bottom = 16.0
+bg_color = Color(0.05, 0.08, 0.06, 0.85)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.35)
+shadow_size = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bar_fill"]
+bg_color = Color(0.35, 0.85, 0.35, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="TestGreen" type="Node3D"]
+script = ExtResource("1_controller")
+
+[node name="LightingRig" parent="." instance=ExtResource("2_lighting")]
+
+[node name="GreenSurface" type="MeshInstance3D" parent="."]
+material_override = ExtResource("4_turf_mat")
+script = ExtResource("3_green_gen")
+green_length = 14.0
+green_width = 9.0
+resolution_x = 140
+resolution_z = 220
+overall_grade_slope = 0.012
+cross_break_strength = 0.06
+tier_ridge_height = 0.12
+noise_amplitude = 0.035
+noise_frequency = 0.25
+fringe_width = 0.85
+cup_position_xz = Vector2(0.0, 0.0)
+
+[node name="GolfFlagAssembly" parent="." instance=ExtResource("5_flag")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="GolfBall" parent="." instance=ExtResource("6_ball")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.0213, 2.4)
+
+[node name="PuttingController" type="Node3D" parent="."]
+script = ExtResource("7_putting")
+
+[node name="UDPBallReceiver" type="Node" parent="."]
+script = ExtResource("10_udp")
+
+[node name="CourseManager" type="Node" parent="."]
+script = ExtResource("12_course")
+
+[node name="MatchManager" type="Node" parent="."]
+script = ExtResource("13_match")
+
+[node name="FreeLookCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.965926, 0.258819, 0, -0.258819, 0.965926, 0, 1.45, 3.2)
+current = true
+fov = 60.0
+near = 0.05
+far = 2000.0
+script = ExtResource("8_camera")
+ball_position = Vector3(0, 0.0213, 2.4)
+cup_position = Vector3(0, 0, 0)
+
+[node name="InspectionHUD" type="CanvasLayer" parent="."]
+script = ExtResource("9_hud")
+
+[node name="HUDPanel" type="PanelContainer" parent="InspectionHUD"]
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 470.0
+offset_bottom = 240.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_hud")
+
+[node name="VBox" type="VBoxContainer" parent="InspectionHUD/HUDPanel"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="InspectionHUD/HUDPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.9, 0.45, 1)
+theme_override_font_sizes/font_size = 14
+text = "GOLF SIM: REAL BALL PUTTING  •  SIMULATION"
+
+[node name="FPSLabel" type="Label" parent="InspectionHUD/HUDPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 1, 0.4, 1)
+theme_override_font_sizes/font_size = 13
+text = "PERFORMANCE: 90 FPS (11.1 ms)  •  Target: 90 Hz"
+
+[node name="HSeparator" type="HSeparator" parent="InspectionHUD/HUDPanel/VBox"]
+layout_mode = 2
+
+[node name="DistanceLabel" type="Label" parent="InspectionHUD/HUDPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 13
+text = "Distance to Pin: 6.3 m (20.7 ft)"
+
+[node name="BreakLabel" type="Label" parent="InspectionHUD/HUDPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.92, 0.85, 1)
+theme_override_font_sizes/font_size = 12
+text = "Break at Ball: Subtle Left to Right"
+
+[node name="StatusLabel" type="Label" parent="InspectionHUD/HUDPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.85, 0.4, 1)
+theme_override_font_sizes/font_size = 12
+text = "READY — Optical tracking active (or hold [Space] to stroke)"
+
+[node name="PowerBar" type="ProgressBar" parent="InspectionHUD/HUDPanel/VBox"]
+custom_minimum_size = Vector2(0, 14)
+layout_mode = 2
+theme_override_styles/fill = SubResource("StyleBoxFlat_bar_fill")
+max_value = 100.0
+show_percentage = false
+
+[node name="HSeparator2" type="HSeparator" parent="InspectionHUD/HUDPanel/VBox"]
+layout_mode = 2
+
+[node name="Presets" type="Label" parent="InspectionHUD/HUDPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.85, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+text = "[A / D / Arrows] Aim  •  [G] Contour Grid (Golf+)  •  [R] Re-spot"
+
+[node name="Controls" type="Label" parent="InspectionHUD/HUDPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.7, 0.65, 1)
+theme_override_font_sizes/font_size = 11
+text = "[1] Golfer Address  |  [2] Slope Crouch  |  [3] Overhead  |  [R-Click] Fly"
+
+[node name="GameMenu" parent="." instance=ExtResource("14_menu")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.4, 1.25)
+
+[node name="XRPlayer" parent="." node_paths=PackedStringArray("desktop_camera", "test_green_controller", "golf_ball", "game_menu") instance=ExtResource("11_xr")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 2.4)
+desktop_camera = NodePath("../FreeLookCamera")
+test_green_controller = NodePath("..")
+golf_ball = NodePath("../GolfBall")
+game_menu = NodePath("../GameMenu")
+

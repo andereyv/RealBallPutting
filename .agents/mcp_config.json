@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "HzOSDevMCP": {
+      "command": "/Applications/Meta Quest Developer Hub.app/Contents/Resources/bin/hzos-dev-mcp",
+      "args": [],
+      "env": {}
+    }
+  }
+}

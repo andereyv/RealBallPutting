@@ -1,0 +1,22 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/physics/ball_controller.gd" id="1_ball_physics"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ball"]
+albedo_color = Color(0.98, 0.98, 0.98, 1)
+roughness = 0.22
+metallic = 0.05
+metallic_specular = 0.55
+
+[sub_resource type="SphereMesh" id="SphereMesh_ball"]
+material = SubResource("StandardMaterial3D_ball")
+radius = 0.0213
+height = 0.0426
+radial_segments = 32
+rings = 16
+
+[node name="GolfBall" type="Node3D"]
+script = ExtResource("1_ball_physics")
+
+[node name="BallMesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_ball")

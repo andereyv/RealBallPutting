@@ -1,0 +1,58 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/environment/lighting_rig.gd" id="1_lighting_script"]
+[ext_resource type="Material" path="res://shaders/sky_dome_material.tres" id="2_sky_mat"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_skydome"]
+material = ExtResource("2_sky_mat")
+radius = 500.0
+height = 1000.0
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_golf"]
+sky_top_color = Color(0.35, 0.58, 0.92, 1)
+sky_horizon_color = Color(0.72, 0.82, 0.9, 1)
+sky_curve = 0.1
+ground_bottom_color = Color(0.35, 0.42, 0.36, 1)
+ground_horizon_color = Color(0.7, 0.8, 0.9, 1)
+ground_curve = 0.02
+sun_angle_max = 30.0
+sun_curve = 0.15
+
+[sub_resource type="Sky" id="Sky_golf"]
+sky_material = SubResource("ProceduralSkyMaterial_golf")
+
+[sub_resource type="Environment" id="Environment_golf"]
+background_mode = 2
+sky = SubResource("Sky_golf")
+ambient_light_source = 2
+ambient_light_sky_contribution = 0.85
+ambient_light_energy = 0.4
+tonemap_mode = 3
+tonemap_exposure = 1.0
+tonemap_white = 1.0
+fog_enabled = false
+volumetric_fog_enabled = false
+
+[node name="LightingRig" type="Node3D"]
+script = ExtResource("1_lighting_script")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_golf")
+
+[node name="SunLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.707107, 0.40558, -0.579228, 0, 0.819152, 0.573576, 0.707107, -0.40558, 0.579228, 0, 10, 0)
+light_color = Color(1, 0.96, 0.88, 1)
+light_energy = 1.1
+shadow_enabled = true
+shadow_bias = 0.03
+shadow_normal_bias = 1.2
+shadow_blur = 1.0
+directional_shadow_mode = 2
+directional_shadow_split_1 = 0.1
+directional_shadow_split_2 = 0.28
+directional_shadow_split_3 = 0.6
+
+[node name="SkyDome" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("SphereMesh_skydome")
+

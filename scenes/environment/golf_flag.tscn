@@ -1,0 +1,172 @@
+[gd_scene load_steps=17 format=3]
+
+[ext_resource type="Shader" path="res://shaders/flag_fabric.gdshader" id="1_flag_shader"]
+[ext_resource type="Shader" path="res://shaders/split_screen_object.gdshader" id="2_split_shader"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_cup_rim"]
+render_priority = 0
+shader = ExtResource("2_split_shader")
+shader_parameter/albedo_color = Color(0.98, 0.98, 0.98, 1)
+shader_parameter/roughness = 0.2
+shader_parameter/metallic = 0.0
+shader_parameter/enable_split_screen = false
+shader_parameter/split_screen_x = 0.5
+shader_parameter/invert_split = false
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_cup_rim"]
+material = SubResource("ShaderMaterial_cup_rim")
+top_radius = 0.054
+bottom_radius = 0.054
+height = 0.025
+radial_segments = 36
+rings = 1
+cap_top = false
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_cup_interior"]
+render_priority = 0
+shader = ExtResource("2_split_shader")
+shader_parameter/albedo_color = Color(0.04, 0.05, 0.04, 1)
+shader_parameter/roughness = 0.95
+shader_parameter/metallic = 0.0
+shader_parameter/enable_split_screen = false
+shader_parameter/split_screen_x = 0.5
+shader_parameter/invert_split = false
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_cup_interior"]
+material = SubResource("ShaderMaterial_cup_interior")
+top_radius = 0.052
+bottom_radius = 0.052
+height = 0.12
+radial_segments = 32
+rings = 1
+cap_top = false
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ferrule"]
+render_priority = 0
+shader = ExtResource("2_split_shader")
+shader_parameter/albedo_color = Color(0.88, 0.9, 0.92, 1)
+shader_parameter/roughness = 0.15
+shader_parameter/metallic = 0.95
+shader_parameter/enable_split_screen = false
+shader_parameter/split_screen_x = 0.5
+shader_parameter/invert_split = false
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_ferrule"]
+material = SubResource("ShaderMaterial_ferrule")
+top_radius = 0.013
+bottom_radius = 0.013
+height = 0.08
+radial_segments = 20
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_staff"]
+render_priority = 0
+shader = ExtResource("2_split_shader")
+shader_parameter/albedo_color = Color(0.98, 0.98, 0.98, 1)
+shader_parameter/roughness = 0.25
+shader_parameter/metallic = 0.0
+shader_parameter/enable_split_screen = false
+shader_parameter/split_screen_x = 0.5
+shader_parameter/invert_split = false
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_staff"]
+material = SubResource("ShaderMaterial_staff")
+top_radius = 0.012
+bottom_radius = 0.012
+height = 2.2
+radial_segments = 20
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_acorn"]
+render_priority = 0
+shader = ExtResource("2_split_shader")
+shader_parameter/albedo_color = Color(0.92, 0.78, 0.28, 1)
+shader_parameter/roughness = 0.2
+shader_parameter/metallic = 0.9
+shader_parameter/enable_split_screen = false
+shader_parameter/split_screen_x = 0.5
+shader_parameter/invert_split = false
+
+[sub_resource type="SphereMesh" id="SphereMesh_acorn"]
+material = SubResource("ShaderMaterial_acorn")
+radius = 0.018
+height = 0.035
+radial_segments = 20
+rings = 10
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_swivel"]
+render_priority = 0
+shader = ExtResource("2_split_shader")
+shader_parameter/albedo_color = Color(0.3, 0.32, 0.35, 1)
+shader_parameter/roughness = 0.3
+shader_parameter/metallic = 0.8
+shader_parameter/enable_split_screen = false
+shader_parameter/split_screen_x = 0.5
+shader_parameter/invert_split = false
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_swivel"]
+material = SubResource("ShaderMaterial_swivel")
+top_radius = 0.015
+bottom_radius = 0.015
+height = 0.02
+radial_segments = 16
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_flag"]
+render_priority = 0
+shader = ExtResource("1_flag_shader")
+shader_parameter/flag_color = Color(0.85, 0.06, 0.1, 1)
+shader_parameter/header_color = Color(0.92, 0.91, 0.88, 1)
+shader_parameter/wind_speed = 5.2
+shader_parameter/wind_strength = 0.08
+shader_parameter/fabric_roughness = 0.6
+shader_parameter/velvet_sheen = 0.65
+shader_parameter/translucency = 0.5
+shader_parameter/enable_split_screen = false
+shader_parameter/split_screen_x = 0.5
+shader_parameter/invert_split = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_flag"]
+material = SubResource("ShaderMaterial_flag")
+size = Vector2(0.5, 0.35)
+subdivide_width = 48
+subdivide_depth = 24
+
+[node name="GolfFlagAssembly" type="Node3D"]
+
+[node name="WhiteCupRim" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.0125, 0)
+cast_shadow = 1
+mesh = SubResource("CylinderMesh_cup_rim")
+
+[node name="CupInteriorDark" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.06, 0)
+cast_shadow = 1
+mesh = SubResource("CylinderMesh_cup_interior")
+
+[node name="Flagstick" type="Node3D" parent="."]
+
+[node name="Ferrule" type="MeshInstance3D" parent="Flagstick"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.04, 0)
+cast_shadow = 1
+mesh = SubResource("CylinderMesh_ferrule")
+
+[node name="Staff" type="MeshInstance3D" parent="Flagstick"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+cast_shadow = 1
+mesh = SubResource("CylinderMesh_staff")
+
+[node name="AcornFinial" type="MeshInstance3D" parent="Flagstick"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.21, 0)
+cast_shadow = 1
+mesh = SubResource("SphereMesh_acorn")
+
+[node name="TopSwivel" type="MeshInstance3D" parent="Flagstick"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.16, 0)
+mesh = SubResource("CylinderMesh_swivel")
+
+[node name="BottomSwivel" type="MeshInstance3D" parent="Flagstick"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.83, 0)
+mesh = SubResource("CylinderMesh_swivel")
+
+[node name="FlagCloth" type="MeshInstance3D" parent="Flagstick"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.258, 1.995, 0)
+cast_shadow = 1
+mesh = SubResource("QuadMesh_flag")

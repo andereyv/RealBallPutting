@@ -1,0 +1,25 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://shaders/putting_green.gdshader" id="1_shader"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_shader")
+shader_parameter/bentgrass_color = Color(0.2, 0.33, 0.16, 1)
+shader_parameter/grain_contrast = 0.055
+shader_parameter/mower_width = 0.53
+shader_parameter/turf_roughness = 0.78
+shader_parameter/velvet_sheen = 0.35
+shader_parameter/collar_color = Color(0.14, 0.24, 0.11, 1)
+shader_parameter/collar_roughness = 0.88
+shader_parameter/micro_grain_scale = 120.0
+shader_parameter/show_contour_grid = true
+shader_parameter/show_elevation_contours = true
+shader_parameter/grid_cell_size = 0.5
+shader_parameter/bead_speed = 1.8
+shader_parameter/grid_intensity = 0.65
+shader_parameter/enable_split_screen = true
+shader_parameter/split_plane_point = Vector3(0, 0, 2.4)
+shader_parameter/split_plane_normal = Vector3(0, 0, 1)
+shader_parameter/split_divider_width = 0.018
+shader_parameter/invert_split = false
