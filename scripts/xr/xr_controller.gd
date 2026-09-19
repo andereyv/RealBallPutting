@@ -34,6 +34,8 @@ enum SplitOrientation {
 
 @export_group("Putting Dynamics & Force")
 @export var putt_force_multiplier: float = 1.0 ## Calibrated 1:1 physical mat roll scaling factor (1.0 = direct measured velocity)
+@export var use_speed_v2: bool = true ## Speed v2: floor-plane reconstruction + least-squares fit (falls back to photocell gate if invalid)
+@export var physical_mat_stimp: float = 14.5 ## Stimp of the PHYSICAL mat, used to extrapolate measured speed back to the spawn point
 
 @export_group("Golfer Profile")
 @export var golfer_handedness: String = "right" ## "right" = Right-handed golfer; "left" = Left-handed golfer
@@ -141,6 +143,9 @@ var _prev_cam_pos: Vector3 = Vector3.ZERO
 var _head_angular_speed: float = 0.0
 var _head_linear_vel: Vector3 = Vector3.ZERO
 var _head_pos_history: Array[Dictionary] = [] # Rolling buffer of {"time": float, "pos": Vector2}
+const PuttSpeedEstimator = preload("res://scripts/physics/putt_speed_estimator.gd")
+var _cam_pose_history: Array[Dictionary] = [] # Speed v2: {"t": float (ticks sec), "xf": Transform3D} last ~1 s
+var _last_speed_v2: Dictionary = {}
 var _candidate_stroke_pos: Vector2 = Vector2.ZERO
 var _candidate_stroke_time: float = 0.0
 var _candidate_stroke_count: int = 0
@@ -481,6 +486,7 @@ func reset_putting_ball() -> void:
 	if bridge != null:
 		bridge.disarmHighSpeedCorridor()
 		bridge.resumeYoloInference()
+		bridge.setExposureLock(false)
 	
 	_record_event("BALL RESET TO TEE")
 	print("[XRController] Putting ball reset: state=SEARCHING, YOLO resumed, tee_spot visible.")
@@ -624,6 +630,12 @@ func _process(delta: float) -> void:
 		_head_pos_history.append({"time": _total_running_time, "pos": cur_head_pos_2d})
 		while _head_pos_history.size() > 1 and (_total_running_time - _head_pos_history[0]["time"]) > 0.60:
 			_head_pos_history.pop_front()
+
+		# Speed v2: full head pose history (wall-clock ticks) to unproject camera samples at their exposure time
+		var now_s := Time.get_ticks_usec() / 1_000_000.0
+		_cam_pose_history.append({"t": now_s, "xf": xr_camera.global_transform})
+		while _cam_pose_history.size() > 2 and now_s - float(_cam_pose_history[0]["t"]) > 1.2:
+			_cam_pose_history.pop_front()
 
 		# Feed live head pose to HeadsetCameraBridge for streaming HUD
 		var bridge = _get_bridge_class()
@@ -1820,10 +1832,35 @@ func _check_and_process_high_speed_putt(bridge, forward_dir_2d: Vector2) -> bool
 	var compensated_dir = true_vel_2d.normalized() if compensated_speed > 0.05 else forward_dir_2d
 	var compensated_angle = rad_to_deg(forward_dir_2d.angle_to(compensated_dir))
 
-	_launch_speed = compensated_speed
-	_launch_angle_deg = compensated_angle
-	_launch_direction = compensated_dir
+	# Speed v2: reconstruct metric floor positions per frame and fit. Old value kept for comparison.
+	var v2 := _estimate_speed_v2(bridge, forward_dir_2d)
+	_last_speed_v2 = v2
+	var v2_used: bool = use_speed_v2 and bool(v2.get("valid", false))
+	print("[SPEED v2] %s: v2=%.2f m/s (%+.1f°, n=%d/%d, rms=%.1fmm, span=%.3fs) | old gate=%.2f m/s (%+.1f°) %s" % [
+		"USED" if v2_used else "NOT USED",
+		float(v2.get("speed", 0.0)), float(v2.get("angle_deg", 0.0)), int(v2.get("used", 0)), int(v2.get("n", 0)),
+		float(v2.get("rms_m", 0.0)) * 1000.0, float(v2.get("span_s", 0.0)),
+		compensated_speed, compensated_angle, str(v2.get("reason", ""))
+	])
+	_log_speed_v2(v2, v2_used, raw_speed, raw_angle, compensated_speed, compensated_angle, forward_dir_2d)
+
+	if use_speed_v2 and not v2_used:
+		# Not enough clean samples = not a real putt (putter touch, blip, detection glitch).
+		# Previously this fell back to the 2-point gate and launched phantom 1.5-3 m/s putts.
+		_record_event("REJECTED putt: %s (gate said %.2f m/s)" % [str(v2.get("reason", "")), compensated_speed])
+		bridge.clearHighSpeedPutt()
+		return false
+
+	if v2_used:
+		_launch_speed = float(v2.speed)
+		_launch_direction = v2.direction
+		_launch_angle_deg = float(v2.angle_deg)
+	else:
+		_launch_speed = compensated_speed
+		_launch_angle_deg = compensated_angle
+		_launch_direction = compensated_dir
 	_is_high_speed_telemetry_putt = true
+	_stroke_samples.clear()
 
 	print("[PHOTOCELL GATE] >>> CONFIRMED PUTT HANDOFF! raw=%.2f m/s (%+.1f°) -> comp=%.2f m/s (%+.1f°), head_sway=%.2f m/s, samples=%d, dt=%.3fs <<<" % [
 		raw_speed, raw_angle, _launch_speed, _launch_angle_deg, head_vel_2d.length(), samples, dt
@@ -2019,20 +2056,24 @@ func _on_physical_ball_detected(norm_x: float, norm_y: float, norm_w: float = 0.
 					print("[PUTT] >>> 1. BALL LOCKED ON TEE: pos=(%.3f, %.3f), dist_to_center=%.1fmm <<<" % [
 						ball_pos_2d.x, ball_pos_2d.y, dist_to_tee_2d * 1000.0
 					])
+				_stroke_samples.clear()
 				_arm_high_speed_corridor()
 				if bridge != null:
 					bridge.pauseYoloInference()
+					bridge.setExposureLock(true)
 				print("[XRController] Stage 1 Complete: Ball confirmed on tee. YOLO PAUSED (0% tracking CPU). Classical 60Hz CV armed. 30s timeout active.")
 			elif dist_to_tee_2d <= 0.50:
 				_is_ball_on_tee = false
 				ball_tracking_state = BallTrackingState.APPROACHING_TEE
 				if bridge != null:
 					bridge.disarmHighSpeedCorridor()
+					bridge.setExposureLock(false)
 			else:
 				_is_ball_on_tee = false
 				ball_tracking_state = BallTrackingState.SEARCHING
 				if bridge != null:
 					bridge.disarmHighSpeedCorridor()
+					bridge.setExposureLock(false)
 
 		BallTrackingState.LOCKED_ON_TEE:
 			# Keep high-speed putting corridor armed with latest camera projection (60-90 Hz differential tracker)
@@ -2201,34 +2242,34 @@ func _handoff_to_virtual_ball(fwd_disp: float, forward_dir_2d: Vector2) -> void:
 	if ball_tracking_state != BallTrackingState.STROKE_DETECTED and ball_tracking_state != BallTrackingState.LOCKED_ON_TEE:
 		return
 	
-	# Compute launch velocity & direction from samples:
-	var measured_speed := _launch_speed
-	var measured_dir := _launch_direction
-	
-	if _stroke_samples.size() >= 2:
-		var first_s: Dictionary = _stroke_samples[0]
-		var last_s: Dictionary = _stroke_samples[_stroke_samples.size() - 1]
-		var dt: float = float(last_s["time"]) - float(first_s["time"])
-		var delta_pos: Vector2 = (last_s["pos"] as Vector2) - (first_s["pos"] as Vector2)
-		if dt > 0.03:
-			var sample_speed := delta_pos.length() / dt
-			measured_speed = clampf(sample_speed, 0.25, 6.0)
-			if delta_pos.length() > 0.02:
-				measured_dir = delta_pos.normalized()
-	
-	if measured_dir.dot(forward_dir_2d) < -0.2:
-		measured_dir = forward_dir_2d
-	
 	# Photocell Gate & High-Speed CV telemetry returns reconstructed physical launch speed v0 directly:
 	if _is_high_speed_telemetry_putt:
 		_launch_speed = clampf(_launch_speed, 0.25, 5.5)
 		_is_high_speed_telemetry_putt = false
+		_stroke_samples.clear()
 	else:
-		var raw_speed := maxf(_launch_speed, measured_speed)
+		# Fallback / low-speed YOLO stroke: compute launch velocity & direction from samples:
+		var measured_speed := _launch_speed
+		var measured_dir := _launch_direction
+		
+		if _stroke_samples.size() >= 2:
+			var first_s: Dictionary = _stroke_samples[0]
+			var last_s: Dictionary = _stroke_samples[_stroke_samples.size() - 1]
+			var dt: float = float(last_s["time"]) - float(first_s["time"])
+			var delta_pos: Vector2 = (last_s["pos"] as Vector2) - (first_s["pos"] as Vector2)
+			if dt > 0.03:
+				var sample_speed := delta_pos.length() / dt
+				measured_speed = clampf(sample_speed, 0.25, 6.0)
+				if delta_pos.length() > 0.02:
+					measured_dir = delta_pos.normalized()
+		
+		if measured_dir.dot(forward_dir_2d) < -0.2:
+			measured_dir = forward_dir_2d
+		
+		var raw_speed := measured_speed # was maxf(_launch_speed, measured_speed), which biased speeds upward
 		_launch_speed = clampf(raw_speed * putt_force_multiplier, 0.30, 5.0)
-
-	_launch_direction = measured_dir
-	_launch_angle_deg = rad_to_deg(forward_dir_2d.angle_to(_launch_direction))
+		_launch_direction = measured_dir
+		_launch_angle_deg = rad_to_deg(forward_dir_2d.angle_to(_launch_direction))
 
 	# Spawn virtual ball at the tee spot along stroke trajectory with full measured initial velocity v0
 	var spawn_dist := clampf(fwd_disp, 0.02, 0.08)
@@ -2317,6 +2358,106 @@ func _project_point_to_norm_cam(p: Vector3, cam_inv: Transform3D, tan_h: float, 
 	var ny: float = 0.5 - (local.y / (-local.z * 2.0 * tan_v))
 	return Vector2(nx, ny)
 
+# =========================================================================
+# SPEED v2 — floor-plane reconstruction + least-squares fit
+# =========================================================================
+const SPEED_V2_SPAWN_DIST := 0.06 # must match the fwd_disp passed to _handoff_to_virtual_ball for HS putts
+
+## Head (XR camera) pose at a wall-clock time, interpolated from the pose history.
+func _head_pose_at(t_s: float) -> Transform3D:
+	if _cam_pose_history.is_empty():
+		return xr_camera.global_transform
+	if t_s <= float(_cam_pose_history[0]["t"]):
+		return _cam_pose_history[0]["xf"]
+	for i in range(1, _cam_pose_history.size()):
+		var b: Dictionary = _cam_pose_history[i]
+		if float(b["t"]) >= t_s:
+			var a: Dictionary = _cam_pose_history[i - 1]
+			var span := float(b["t"]) - float(a["t"])
+			var w := (t_s - float(a["t"])) / span if span > 1e-6 else 0.0
+			return (a["xf"] as Transform3D).interpolate_with(b["xf"] as Transform3D, w)
+	return _cam_pose_history[_cam_pose_history.size() - 1]["xf"]
+
+## Inverse of _project_point_to_norm_cam: normalized camera coords -> point on horizontal plane y = plane_y.
+## Returns Vector3(NAN...) when the ray does not hit the plane.
+func _norm_cam_to_floor(norm: Vector2, head_xf: Transform3D, plane_y: float) -> Vector3:
+	var cam_origin: Vector3 = head_xf.origin + head_xf.basis * Vector3(camera_x_offset_m, camera_y_offset_m, camera_z_offset_m)
+	var cam_basis: Basis = head_xf.basis * Basis(Vector3.RIGHT, deg_to_rad(-camera_optical_tilt_deg))
+	var tan_h: float = tan(deg_to_rad(camera_hfov_deg * 0.5))
+	var tan_v: float = tan(deg_to_rad(camera_vfov_deg * 0.5))
+	var dir_local := Vector3((norm.x - 0.5) * 2.0 * tan_h, -(norm.y - 0.5) * 2.0 * tan_v, -1.0)
+	var dir: Vector3 = cam_basis * dir_local
+	if dir.y > -1e-4:
+		return Vector3(NAN, NAN, NAN)
+	var k := (plane_y - cam_origin.y) / dir.y
+	return cam_origin + dir * k
+
+func _estimate_speed_v2(bridge, forward_dir_2d: Vector2) -> Dictionary:
+	if bridge == null or xr_camera == null:
+		return {"valid": false, "reason": "no bridge"}
+	var raw = bridge.getHighSpeedSamples()
+	if raw == null or raw.size() < 1:
+		return {"valid": false, "reason": "no samples from bridge"}
+	var count := int(raw[0])
+	if raw.size() < 1 + count * 4:
+		return {"valid": false, "reason": "malformed sample array"}
+
+	var floor_y: float = tee_box_pos.y if enable_tee_box else 0.002
+	var ball_center_y := floor_y + 0.02135 # blob centroid ~ ball centre, not the contact point
+	var now_s := Time.get_ticks_usec() / 1_000_000.0
+
+	var times := PackedFloat64Array()
+	var pts := PackedVector2Array()
+	var samples_log := []
+	for i in count:
+		var t_rel := float(raw[1 + i * 4])
+		var age := float(raw[2 + i * 4])
+		var norm := Vector2(float(raw[3 + i * 4]), float(raw[4 + i * 4]))
+		var head_xf := _head_pose_at(now_s - age)
+		var p := _norm_cam_to_floor(norm, head_xf, ball_center_y)
+		samples_log.append([snappedf(t_rel, 0.0001), snappedf(age, 0.0001), snappedf(norm.x, 0.00001), snappedf(norm.y, 0.00001),
+			snappedf(p.x, 0.0001), snappedf(p.z, 0.0001)])
+		if is_nan(p.x):
+			continue
+		times.append(t_rel)
+		pts.append(Vector2(p.x, p.z))
+
+	var start_pos: Vector2 = _locked_ball_pos_2d if _locked_ball_pos_2d != Vector2.ZERO else Vector2(tee_box_pos.x, tee_box_pos.z)
+	var decel := 0.56 * 9.81 / maxf(physical_mat_stimp, 6.0)
+	var res := PuttSpeedEstimator.estimate(times, pts, start_pos, decel, SPEED_V2_SPAWN_DIST, forward_dir_2d)
+	res["samples"] = samples_log
+	res["start_pos"] = [start_pos.x, start_pos.y]
+	return res
+
+func _log_speed_v2(v2: Dictionary, used: bool, raw_speed: float, raw_angle: float, old_speed: float, old_angle: float, fwd: Vector2) -> void:
+	var entry := {
+		"time": Time.get_datetime_string_from_system(),
+		"used_v2": used,
+		"v2_speed": v2.get("speed", 0.0), "v2_angle": v2.get("angle_deg", 0.0),
+		"v2_valid": v2.get("valid", false), "v2_reason": v2.get("reason", ""),
+		"v2_rms_mm": float(v2.get("rms_m", 0.0)) * 1000.0, "v2_lateral_rms_mm": float(v2.get("lateral_rms_m", 0.0)) * 1000.0,
+		"v2_n": v2.get("n", 0), "v2_used_n": v2.get("used", 0), "v2_span_s": v2.get("span_s", 0.0),
+		"v2_first_dist": v2.get("first_dist", 0.0), "v2_last_dist": v2.get("last_dist", 0.0),
+		"gate_raw_speed": raw_speed, "gate_raw_angle": raw_angle,
+		"gate_comp_speed": old_speed, "gate_comp_angle": old_angle,
+		"forward": [fwd.x, fwd.y], "start_pos": v2.get("start_pos", []),
+		"head_pos": [xr_camera.global_position.x, xr_camera.global_position.y, xr_camera.global_position.z],
+		"cam": [camera_hfov_deg, camera_vfov_deg, camera_optical_tilt_deg, camera_x_offset_m, camera_y_offset_m, camera_z_offset_m],
+		"mat_stimp": physical_mat_stimp,
+		"samples": v2.get("samples", []), # [t_rel, age, norm_x, norm_y, floor_x, floor_z]
+	}
+	var line := JSON.stringify(entry)
+	var paths := ["user://speed_v2_log.jsonl"]
+	if OS.has_feature("android"):
+		paths.push_front("/storage/emulated/0/Android/data/com.example.realballputting/files/speed_v2_log.jsonl")
+	for path in paths:
+		var f := FileAccess.open(path, FileAccess.READ_WRITE if FileAccess.file_exists(path) else FileAccess.WRITE)
+		if f != null:
+			f.seek_end()
+			f.store_line(line)
+			f.close()
+			return
+
 func _arm_high_speed_corridor() -> void:
 	var bridge = _get_bridge_class()
 	if bridge == null or xr_camera == null:
@@ -2350,49 +2491,42 @@ func _arm_high_speed_corridor() -> void:
 		ball_anchor = _filtered_ball_pos
 		ball_anchor.y = floor_y
 
-	# Forward corridor: starts just past address (+4cm) and ends at +45cm
-	var p_entry := ball_anchor + fwd_3d * 0.04
+	# Forward corridor: starts at the ball address spot and ends at +45cm
+	var p_start := ball_anchor
 	var p_exit := ball_anchor + fwd_3d * 0.45
 	var w_half := 0.18 # ±18cm lateral width
 
-	var c0 := p_entry - lat_3d * w_half
-	var c1 := p_entry + lat_3d * w_half
+	var c0 := p_start - lat_3d * w_half
+	var c1 := p_start + lat_3d * w_half
 	var c2 := p_exit - lat_3d * w_half
 	var c3 := p_exit + lat_3d * w_half
 
-	var s_entry := _project_point_to_norm_cam(p_entry, cam_inv, tan_h, tan_v)
+	var s_start := _project_point_to_norm_cam(p_start, cam_inv, tan_h, tan_v)
 	var s_exit := _project_point_to_norm_cam(p_exit, cam_inv, tan_h, tan_v)
 	var sc0 := _project_point_to_norm_cam(c0, cam_inv, tan_h, tan_v)
 	var sc1 := _project_point_to_norm_cam(c1, cam_inv, tan_h, tan_v)
 	var sc2 := _project_point_to_norm_cam(c2, cam_inv, tan_h, tan_v)
 	var sc3 := _project_point_to_norm_cam(c3, cam_inv, tan_h, tan_v)
 
-	# If left camera already detects the ball on the tee, anchor s_entry directly to camera detection
-	if _last_left_norm_x > 0.05 and _last_left_norm_y > 0.05:
-		var ball_cam := Vector2(_last_left_norm_x, _last_left_norm_y)
-		var proj_fwd := (s_exit - s_entry).normalized() if (s_exit - s_entry).length() > 0.02 else Vector2(-1.0, 0.0)
-		s_entry = ball_cam
-		s_exit = ball_cam + proj_fwd * 0.35
-
-	if s_entry.x < 0.02 or s_entry.x > 0.98 or s_entry.y < 0.02 or s_entry.y > 0.98:
-		# Tee entry point is outside camera frame, skip reprojecting
+	if s_start.x < 0.02 or s_start.x > 0.98 or s_start.y < 0.02 or s_start.y > 0.98:
+		# Tee ball spot is outside camera frame, skip reprojecting
 		return
 
-	var margin := 0.06 # Generous ±6% screen margin to guarantee ball & streak remain in ROI
-	var min_x := clampf(minf(minf(minf(sc0.x, sc1.x), minf(sc2.x, sc3.x)), minf(s_entry.x, s_exit.x)) - margin, 0.0, 1.0)
-	var max_x := clampf(maxf(maxf(maxf(sc0.x, sc1.x), maxf(sc2.x, sc3.x)), maxf(s_entry.x, s_exit.x)) + margin, 0.0, 1.0)
-	var min_y := clampf(minf(minf(minf(sc0.y, sc1.y), minf(sc2.y, sc3.y)), minf(s_entry.y, s_exit.y)) - margin, 0.0, 1.0)
-	var max_y := clampf(maxf(maxf(maxf(sc0.y, sc1.y), maxf(sc2.y, sc3.y)), maxf(s_entry.y, s_exit.y)) + margin, 0.0, 1.0)
+	var margin := 0.05 # Generous ±5% screen margin to guarantee ball & streak remain in ROI
+	var min_x := clampf(minf(minf(minf(sc0.x, sc1.x), minf(sc2.x, sc3.x)), minf(s_start.x, s_exit.x)) - margin, 0.0, 1.0)
+	var max_x := clampf(maxf(maxf(maxf(sc0.x, sc1.x), maxf(sc2.x, sc3.x)), maxf(s_start.x, s_exit.x)) + margin, 0.0, 1.0)
+	var min_y := clampf(minf(minf(minf(sc0.y, sc1.y), minf(sc2.y, sc3.y)), minf(s_start.y, s_exit.y)) - margin, 0.0, 1.0)
+	var max_y := clampf(maxf(maxf(maxf(sc0.y, sc1.y), maxf(sc2.y, sc3.y)), maxf(s_start.y, s_exit.y)) + margin, 0.0, 1.0)
 
-	var delta_screen := s_exit - s_entry
+	var delta_screen := s_exit - s_start
 	var screen_len := delta_screen.length()
 	if screen_len < 0.04:
 		return
 	var fwd_norm := delta_screen.normalized()
-	var physical_corridor_len := (p_exit - p_entry).length()
+	var physical_corridor_len := 0.45
 	var meters_per_norm_unit := physical_corridor_len / screen_len
 
-	bridge.armHighSpeedCorridor(min_x, min_y, max_x, max_y, s_entry.x, s_entry.y, fwd_norm.x, fwd_norm.y, meters_per_norm_unit, screen_len)
+	bridge.armHighSpeedCorridor(min_x, min_y, max_x, max_y, s_start.x, s_start.y, fwd_norm.x, fwd_norm.y, meters_per_norm_unit, screen_len)
 
 
 func _on_session_begun() -> void:

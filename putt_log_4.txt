@@ -1,0 +1,558 @@
+--------- beginning of main
+09-20 00:56:20.578   963 18394 I Tracking: INPUT_TRACKING: InputTrackingTelemetryStats::populateTelemetry(): controller_device_id: 0x0, handedness: Unknown, tracking_portion: 0, num_ekf_internal_flyaway: 0,num_output_flyaways: 0, num_output_flyaways_v2: 0, num_output_flyaways_v3: 0, num_output_flyaways_v4: 0, num_imu_samples_dropped_max_consecutive: 0, output_jitter_mean: 0, output_reacquisition_jump_distances_mean: nan, internal_reset_jump_distances_mean: nan, process_imu_data_duration_p90: 0
+09-20 00:56:20.578   963 18394 I Tracking: INPUT_TRACKING: InputTrackingTelemetryStats::populateTelemetry(): controller_device_id: 0x0, handedness: Unknown, tracking_portion: 0, num_ekf_internal_flyaway: 0,num_output_flyaways: 0, num_output_flyaways_v2: 0, num_output_flyaways_v3: 0, num_output_flyaways_v4: 0, num_imu_samples_dropped_max_consecutive: 0, output_jitter_mean: 0, output_reacquisition_jump_distances_mean: nan, internal_reset_jump_distances_mean: nan, process_imu_data_duration_p90: 0
+09-20 00:56:20.578   963 18394 I Tracking: INPUT_TRACKING: InputTrackingTelemetryStats::populateTelemetry(): controller_device_id: 0x0, handedness: Unknown, tracking_portion: 0, num_ekf_internal_flyaway: 0,num_output_flyaways: 0, num_output_flyaways_v2: 0, num_output_flyaways_v3: 0, num_output_flyaways_v4: 0, num_imu_samples_dropped_max_consecutive: 0, output_jitter_mean: 0, output_reacquisition_jump_distances_mean: nan, internal_reset_jump_distances_mean: nan, process_imu_data_duration_p90: 0
+09-20 00:56:20.578   963 18394 I Tracking: INPUT_TRACKING: InputTrackingTelemetryStats::populateTelemetry(): controller_device_id: 0x0, handedness: Unknown, tracking_portion: 0, num_ekf_internal_flyaway: 0,num_output_flyaways: 0, num_output_flyaways_v2: 0, num_output_flyaways_v3: 0, num_output_flyaways_v4: 0, num_imu_samples_dropped_max_consecutive: 0, output_jitter_mean: 0, output_reacquisition_jump_distances_mean: nan, internal_reset_jump_distances_mean: nan, process_imu_data_duration_p90: 0
+09-20 00:56:20.578   963 18394 I Tracking: telemetry::MrHandTrackingAggregator: populateTelemetry (hands_environment_ml_periodic_events)
+09-20 00:56:20.578   963 18394 I Tracking: telemetry::MrHandTrackingAggregator: reportHalEvent (hands_environment_ml_periodic_events)
+09-20 00:56:20.579  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.579   963 18394 I Tracking: telemetry::MrHandTrackingAggregator: populateTelemetry (hands_performance_ml_essential_periodic_events)
+09-20 00:56:20.579   963 18394 I Tracking: telemetry::MrHandTrackingAggregator: reportHalEvent (hands_performance_ml_essential_periodic_events)
+09-20 00:56:20.579   963 18394 I Tracking: telemetry::MrHandTrackingAggregator: populateTelemetry (hands_quality_ml_essential_periodic_events)
+09-20 00:56:20.581   963 18394 I Tracking: telemetry::MrHandTrackingAggregator: reportHalEvent (hands_quality_ml_essential_periodic_events)
+09-20 00:56:20.592  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.606  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.607  3236 18327 I [CT]    : MIXEDREALITY: PassthroughApiManager: GetUpdatedLayerState: (every 2 seconds) PT is: ON numLayers: 1
+09-20 00:56:20.620  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.633  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.648  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.661  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.673  3727  6054 I OpenXRAnchorDiscovery: xrDiscoverSpacesMETA: buildFilterMETA: filters is null
+09-20 00:56:20.673  3727  6054 I [CT]    : SP:AF:InsightAnchorApi: DiscoverSpaces (task start) flags: 32, request: 2422
+09-20 00:56:20.673  3727  6054 I IStateMachineRecordKeeper: AddHistoryEntry AnchorQuery: Transition  ReadyToQuery -> Discovery
+09-20 00:56:20.673  3727  6642 I [CT]    : SP:AF:InsightAnchorApi: coroDiscoverSpacesFlow (task start) request: 2422
+09-20 00:56:20.673  3727  6642 I [CT]    : SP:AF:AnchorFramework: coroDiscoverSpaces: filterInfo: flags: 96, numUuids: 0, radius: -1, enabledComponents: 0, maxNumSpacesToQuery: 0, groupUuids: , tags: , dataSource: 1, hasTrackableStateFilter: 1
+09-20 00:56:20.673  3727  6642 I [CT]    : SP:AF:AnchorFramework: Inserting discovery operation request handle 2422 -> extension suite ApiExtensionSuite::META(1) + exp version ExperimentalVersion::PROD(1) into map
+09-20 00:56:20.673  6108  6671 I [CT]    : SP:AP:AnchorPersistence: queryEntities: filterInfo: flags: 96, numUuids: 0, radius: -1, enabledComponents: 0, maxNumSpacesToQuery: 0, groupUuids: , tags: , dataSource: 1, hasTrackableStateFilter: 1, appId: com.oculus.guardian, request: 2422, appOpenXrVersion: 281479271678005
+09-20 00:56:20.673  6108  6671 I [CT]    : SP:AP:AnchorPersistence: discoverSpacesLocal: translateFilters complete. filterVector size: 2
+09-20 00:56:20.673  6108  6671 I [CT]    : SP:AP:AnchorPersistence:     Filter #0: type: AnchorDiscoveryFilterType::APP(3)
+09-20 00:56:20.673  6108  6671 I [CT]    : SP:AP:AnchorPersistence:     Filter #1: type: AnchorDiscoveryFilterType::TRACKABLE_STATE(8)
+09-20 00:56:20.673  6108  6671 I [CT]    : SP:AP:AnchorPersistence: discoverSpacesLocal: Scheduling local query for Anchors, with 2 filters, request: 2422
+09-20 00:56:20.673  6108  6671 I [CT]    : SP:AP:AnchorPersistence: discoverSpacesLocal Attempting local query, request: 2422
+09-20 00:56:20.673  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: operator() : No uuidFilter is provided
+09-20 00:56:20.673  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: appId com.oculus.guardian
+09-20 00:56:20.673  6108  6671 I [CT]    : SP:AP:AnchorLocalStorage: appId com.oculus.guardian loadOnlySceneModelAnchors false includeGuardianSpatialAnchor false
+09-20 00:56:20.674  6108  6671 I [CT]    : SP:AP:AnchorLocalStorage: listAllAnchors listed 1 anchors
+09-20 00:56:20.674  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: numAnchors obtained from local storage: 1
+09-20 00:56:20.674  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: waitForSlamLocalAnchorDiscovery:
+09-20 00:56:20.675  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: waitForSlamLocalAnchorDiscovery: resultCode: 13, numAnchors: 25, timestamp: 15484.090412000 [sec]
+09-20 00:56:20.675  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: filterByLocatable is true, filter by localized anchors
+09-20 00:56:20.675  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: num Slam LAD results: 25
+09-20 00:56:20.675  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: Filter anchors by component, uuid
+09-20 00:56:20.675  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: AnchorOpt uuid: ebf3e884-9e26-d4ca-c8a5-54d0f3ec9605
+09-20 00:56:20.675  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: anchorOpt uuid: ebf3e884-9e26-d4ca-c8a5-54d0f3ec9605, spatialAnchorRef uuid 134da70a-6db9-8021-abd0-235497430bf6 match successful
+09-20 00:56:20.675  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: operator(): Discovered 1 anchors locally
+09-20 00:56:20.675  6108  6671 I [CT]    : SP:AP:AnchorPersistence: discoverSpacesLocal queryResult success, request: 2422
+09-20 00:56:20.675  6108  6671 I [CT]    : SP:AP:AnchorPersistence: DiscoverSpaces local query success took: 0.001719219
+09-20 00:56:20.675  6108  6671 I [CT]    : SP:AP:AnchorPersistence: discoverSpacesLocal: Checking for killswitch based filtering
+09-20 00:56:20.675  6108  6671 I [CT]    : SP:SceneAnchorFilterUtil: filterOutEntitiesAndComponents : Guardian:true, App OpenXR Version patch:53 (vs. min patch without filtering 45), appIdInOverrideString:false, ocKillswitch:false, fsKillswitch:false
+09-20 00:56:20.675  6108  6671 I [CT]    : SP:AP:AnchorPersistenceConfig: operator(): Not updating anchor_persistence.anchor_discovery_batch_size as it was explicitly overwritten to 10
+09-20 00:56:20.675  6108  6671 I [CT]    : SP:AP:AnchorPersistence: Sending DiscoverSpaces found event with max spaces (Local) returnCode: 0, numSpacesFound: 1, request: 2422
+09-20 00:56:20.675  6108  6671 I [CT]    : SP:AP:AnchorPersistenceRuntimeIpcServer: PostClientEvent for DiscoverSpaces found event: requestHandle 2422, resultCode: 0
+09-20 00:56:20.675  6108  6671 I [CT]    : SP:AP:AnchorPersistence: DiscoverSpaces local query success finish took: 0.001811302
+09-20 00:56:20.675  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.675  6108  6671 I [CT]    : SP:AP:AnchorPersistence: Sending DiscoverSpaces finish event returnCode: 0, request: 2422
+09-20 00:56:20.675  6108  6671 I [CT]    : SP:AP:AnchorPersistenceRuntimeIpcServer: PostClientEvent for DiscoverSpaces finish event: requestHandle 2422, resultCode: 0
+09-20 00:56:20.676  6108  7446 I [CT]    : SP:AP:AnchorPersistenceRuntimeIpcServer: retrieveDiscoverSpacesEventData: clientId: 4042179282
+09-20 00:56:20.676  3727  6642 I [CT]    : SP:AF:InsightAnchorApi: coroDiscoverSpacesFlow (task finish) request: 2422
+09-20 00:56:20.677  3727  6664 I [CT]    : SP:AF:AnchorFramework: Received DiscoverSpaces found event returnCode: 0, numSpacesFound: 1, spacesFoundUuids: [ebf3e884-9e26-d4ca-c8a5-54d0f3ec9605], request: 2422, extension suite: ApiExtensionSuite::META(1), exp version: ExperimentalVersion::PROD(1)
+09-20 00:56:20.677  3727  6664 I [CT]    : SP:AF:AnchorFramework: Received DiscoverSpaces finish event returnCode: 0, request: 2422, extension suite: ApiExtensionSuite::META(1), exp version: ExperimentalVersion::PROD(1)
+09-20 00:56:20.677  3727  6664 I [CT]    : SP:AF:AnchorFramework: registerDiscoverSpacesEventHandler discoverSpacesComplete result code: 0
+09-20 00:56:20.687  3727  6054 I TREX    : Spatial Persistence event: DiscoverSpacesFound
+09-20 00:56:20.687  3727  6054 I TREX    : Updating enabled data components from query results for entity type 2
+09-20 00:56:20.687  3727  6054 I TREX    : Spatial Persistence event: spEvent_DiscoverSpacesFinish
+09-20 00:56:20.687  3727  6054 I OpenXR_local: RetrieveXrSpaceDiscoveryResultsMETA: cache size: 1
+09-20 00:56:20.687  3727  6054 W RuntimeTelemetryThread: [OpenXR_Anchor] component enabled cannot be changed; 4
+09-20 00:56:20.687  3727  6054 W RuntimeTelemetryThread: [OpenXR_Anchor] component enabled cannot be changed; 1000269000
+09-20 00:56:20.687  3727  6054 I GuardianTelemetry: [ovrStatsThreadGuardian::sendGuardianStateChangeTelemetry] Sending state change event ANCHOR_QUERY_FAILED, dialog 
+09-20 00:56:20.687  3727  6054 I GuardianTelemetry: [ovrStatsThreadGuardian::sendGuardianStateChangeTelemetry] Sending state change event GARBAGE_ANCHORS_RETURNED, dialog 
+09-20 00:56:20.689  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.700  3727  6054 I IStateMachineRecordKeeper: AddHistoryEntry AnchorQuery: Transition  Discovery -> ReadyToQuery | Discovery complete
+09-20 00:56:20.703  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.717  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.731  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.745  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.759  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.772  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.786  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.800  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.814  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.828  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.842  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.856  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.864  1264  1742 I MRSS    : MIXEDREALITY: MrRuntimeCompute: dispatchFrameset : (every 5 seconds). DepthMeshing: OFF, SemanticVolume: OFF, MetaForegroundFreespaceScan: OFF, SceneReconstruction: OFF, SceneLayout: OFF, Depth: ON, SceneObjects: OFF, VisionInterfaceTelemetry: ON, InstantFunctionalSurfaces: OFF, MetaEnvironmentDepth: ON, SporadicDepth: OFF, LightingEstimation: OFF, PlaneFreespace: OFF, MetaBackgroundFreespaceScan: OFF, Camera: ON, TrackedKeypoints: OFF, MrFeatureTelemetry: ON, InstantPlacement: OFF, MetaAssistedSceneCapture: OFF, Semantics: OFF, Passthrough: ON, Fiducials: OFF, FloorHeight: OFF
+09-20 00:56:20.870  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.884  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.897  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.898  3236  3293 W MessageExecutionMonitor: Skipping getStackTrace: target thread state RUNNABLE, MQD callback delayed by 1 ms; risk of ART nterp stack-walk SIGSEGV / suspension timeout
+09-20 00:56:20.899   963  1791 I Tracking: Vega: [INSIGHTS] Mode=DescriptorVega,6DoF,Agg=0s,Inl=20,22,24,Mem=107.5,FrameDur=6.2,6.4,PoseLat=1.5,2.0,CamImuLat=23.6,26.7,Jit=0.0,0.0,Drops(Cam=0,IMU=0),MeanIr=704.0,Exp(7.1ms,g=10,I=59)(7.1ms,g=10,I=59)(9.3ms,g=13,I=61)(8.1ms,g=11,I=59)(0.0ms,g=0)(0.0ms,g=0)
+09-20 00:56:20.911  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.925  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.939  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.953  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.955  3236 18327 I PassthroughInCompositorRenderer: PTINC FOVEAMETA gain=12.48 exposureMs=6.000 tempC=0.0 lux=291.6
+09-20 00:56:20.967  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.980  5192 18286 V ClientSharedTelemetryStats: App memory usage: PSS=428 MiB, PrivateDirty=344 MiB, PrivateClean=70 MiB, GPU=201.4/201.4 MiB (100% allocated)
+09-20 00:56:20.980  5192 18286 I VrApi   : FPS=72/72,Prd=26ms,Tear=0,Early=0,Stale=1,Stale2/5/10/max=0/0/0/1,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=3/3,1651/492MHz,OC=3F,TA=0/0/0,SP=N/N/N,Mem=2736MHz,Free=3527MB,PLS=0,Temp=56.0C/0.0C,TW=2.08ms,App=0.32ms,GD=0.23ms,CPU&GPU=7.13ms,LCnt=5(DR73,LM3),GPU%=0.23,CPU%=0.80(W0.83),CFL=11.72/15.56,ICFLp95=14.84,LD=0,SF=0.60,DpuScale=1.00,LP=0,DVFS=0,Preempt=249,PoseAgeP95=0.00
+09-20 00:56:20.981  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:20.985  6693  6868 W MessageExecutionMonitor: Skipping getStackTrace: target thread state RUNNABLE, MQD callback delayed by 2 ms; risk of ART nterp stack-walk SIGSEGV / suspension timeout
+09-20 00:56:20.995  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.009  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.023  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.031  7117  7308 W MessageExecutionMonitor: Skipping getStackTrace: target thread state RUNNABLE, MQD callback delayed by 1 ms; risk of ART nterp stack-walk SIGSEGV / suspension timeout
+09-20 00:56:21.036  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.050  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.059  1264  1775 I MRSS    : MIXEDREALITY: MrService: renderIteration: (every 10 seconds), screen is: ON, PT is: OFF, Depth is: OFF
+09-20 00:56:21.064  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.065   963  1796 I Tracking: NIMBLE:UnifiedHandBodyTracking:ExposureControl: [Throttled count=1047] FMM: enabled: true; active: false
+09-20 00:56:21.065   963  1796 I Tracking: NIMBLE:UnifiedHandBodyEngine: Pipeline Latency P50: 10.12ms; Capture Latency P50: 13.50ms [arrival:13.00ms|engine:0.35ms|process:0.03ms]
+09-20 00:56:21.065   963  1796 I Tracking: NIMBLE:UnifiedHandBodyEngine: Pipeline Latency P95: 14.22ms; Capture Latency P95: 14.49ms [arrival:13.71ms|engine:1.13ms|process:0.11ms]
+09-20 00:56:21.065   963  1796 I Tracking: NIMBLE:UnifiedHandBodyEngine: Hand Tracking Processed FPS = 29.96 Hz / Camera FPS = 29.96 Hz
+09-20 00:56:21.078  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.092  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.106  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.113   982  3901 I libcamerahal: [INSIGHTS][2.00s] heartbeat: [cam2: (2: 60/60/0)] [cam3: (2: 60/60/0)]
+09-20 00:56:21.113   982  3901 I libcamerahal: [INSIGHTS][2.00s] heartbeat: [cam0: (2: 61/61/0)] [cam1: (2: 61/61/0)]
+09-20 00:56:21.120  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.134  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.148  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.161  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.176  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.189  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.196   963  1796 I Tracking: NIMBLE:UnifiedHandBodyTracking:ExposureControl: [Frame 77722 camera 0] [HT] has_hand = YES, irradiance_proxy =   1217.5, intensity =   86.5, exposure =  7.105ms, gain =   10
+09-20 00:56:21.203  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.217  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.231  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.245   980 18234 I VD628x  : Flicker results: freq 1000.028381, max 1000.023071, dcr 22.071457, pct 0.159793, idx 0.049352, conf 0.766031, snr 5.313735, svm 0.070351, sus 1
+09-20 00:56:21.245  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.259  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.272  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.286  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.300  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.314  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.328  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.342  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.356  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.370  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.384  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.398  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.411  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.425  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.439  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.453  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.467  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.481  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.495  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.509  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.523  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.536  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.550  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.564  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.578  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.592  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.606  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.614   982  3901 I libcamerahal: [INSIGHTS][2.00s] heartbeat: [cam4: (13: 144/144/0)] [cam5: (13: 144/144/0)]
+09-20 00:56:21.620  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.633  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.648  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.661  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.675  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.686  3727  6054 I OpenXRAnchorDiscovery: xrDiscoverSpacesMETA: buildFilterMETA: filters is null
+09-20 00:56:21.686  3727  6054 I [CT]    : SP:AF:InsightAnchorApi: DiscoverSpaces (task start) flags: 32, request: 2423
+09-20 00:56:21.687  3727  6054 I IStateMachineRecordKeeper: AddHistoryEntry AnchorQuery: Transition  ReadyToQuery -> Discovery
+09-20 00:56:21.687  3727  6642 I [CT]    : SP:AF:InsightAnchorApi: coroDiscoverSpacesFlow (task start) request: 2423
+09-20 00:56:21.687  3727  6642 I [CT]    : SP:AF:AnchorFramework: coroDiscoverSpaces: filterInfo: flags: 96, numUuids: 0, radius: -1, enabledComponents: 0, maxNumSpacesToQuery: 0, groupUuids: , tags: , dataSource: 1, hasTrackableStateFilter: 1
+09-20 00:56:21.687  3727  6642 I [CT]    : SP:AF:AnchorFramework: Inserting discovery operation request handle 2423 -> extension suite ApiExtensionSuite::META(1) + exp version ExperimentalVersion::PROD(1) into map
+09-20 00:56:21.688  6108  6671 I [CT]    : SP:AP:AnchorPersistence: queryEntities: filterInfo: flags: 96, numUuids: 0, radius: -1, enabledComponents: 0, maxNumSpacesToQuery: 0, groupUuids: , tags: , dataSource: 1, hasTrackableStateFilter: 1, appId: com.oculus.guardian, request: 2423, appOpenXrVersion: 281479271678005
+09-20 00:56:21.688  6108  6671 I [CT]    : SP:AP:AnchorPersistence: discoverSpacesLocal: translateFilters complete. filterVector size: 2
+09-20 00:56:21.688  6108  6671 I [CT]    : SP:AP:AnchorPersistence:     Filter #0: type: AnchorDiscoveryFilterType::APP(3)
+09-20 00:56:21.688  6108  6671 I [CT]    : SP:AP:AnchorPersistence:     Filter #1: type: AnchorDiscoveryFilterType::TRACKABLE_STATE(8)
+09-20 00:56:21.688  6108  6671 I [CT]    : SP:AP:AnchorPersistence: discoverSpacesLocal: Scheduling local query for Anchors, with 2 filters, request: 2423
+09-20 00:56:21.688  6108  6671 I [CT]    : SP:AP:AnchorPersistence: discoverSpacesLocal Attempting local query, request: 2423
+09-20 00:56:21.688  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: operator() : No uuidFilter is provided
+09-20 00:56:21.688  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: appId com.oculus.guardian
+09-20 00:56:21.688  6108  6671 I [CT]    : SP:AP:AnchorLocalStorage: appId com.oculus.guardian loadOnlySceneModelAnchors false includeGuardianSpatialAnchor false
+09-20 00:56:21.688  6108  6671 I [CT]    : SP:AP:AnchorLocalStorage: listAllAnchors listed 1 anchors
+09-20 00:56:21.689  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.689  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: numAnchors obtained from local storage: 1
+09-20 00:56:21.689  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: waitForSlamLocalAnchorDiscovery:
+09-20 00:56:21.690  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: waitForSlamLocalAnchorDiscovery: resultCode: 13, numAnchors: 25, timestamp: 15484.990376000 [sec]
+09-20 00:56:21.690  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: filterByLocatable is true, filter by localized anchors
+09-20 00:56:21.690  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: num Slam LAD results: 25
+09-20 00:56:21.690  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: Filter anchors by component, uuid
+09-20 00:56:21.690  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: AnchorOpt uuid: ebf3e884-9e26-d4ca-c8a5-54d0f3ec9605
+09-20 00:56:21.690  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: anchorOpt uuid: ebf3e884-9e26-d4ca-c8a5-54d0f3ec9605, spatialAnchorRef uuid 134da70a-6db9-8021-abd0-235497430bf6 match successful
+09-20 00:56:21.690  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: operator(): Discovered 1 anchors locally
+09-20 00:56:21.690  6108  6671 I [CT]    : SP:AP:AnchorPersistence: discoverSpacesLocal queryResult success, request: 2423
+09-20 00:56:21.690  6108  6671 I [CT]    : SP:AP:AnchorPersistence: DiscoverSpaces local query success took: 0.002040625
+09-20 00:56:21.690  6108  6671 I [CT]    : SP:AP:AnchorPersistence: discoverSpacesLocal: Checking for killswitch based filtering
+09-20 00:56:21.690  6108  6671 I [CT]    : SP:SceneAnchorFilterUtil: filterOutEntitiesAndComponents : Guardian:true, App OpenXR Version patch:53 (vs. min patch without filtering 45), appIdInOverrideString:false, ocKillswitch:false, fsKillswitch:false
+09-20 00:56:21.690  6108  6671 I [CT]    : SP:AP:AnchorPersistenceConfig: operator(): Not updating anchor_persistence.anchor_discovery_batch_size as it was explicitly overwritten to 10
+09-20 00:56:21.690  6108  6671 I [CT]    : SP:AP:AnchorPersistence: Sending DiscoverSpaces found event with max spaces (Local) returnCode: 0, numSpacesFound: 1, request: 2423
+09-20 00:56:21.690  6108  6671 I [CT]    : SP:AP:AnchorPersistenceRuntimeIpcServer: PostClientEvent for DiscoverSpaces found event: requestHandle 2423, resultCode: 0
+09-20 00:56:21.690  6108  6671 I [CT]    : SP:AP:AnchorPersistence: DiscoverSpaces local query success finish took: 0.002151667
+09-20 00:56:21.690  6108  6671 I [CT]    : SP:AP:AnchorPersistence: Sending DiscoverSpaces finish event returnCode: 0, request: 2423
+09-20 00:56:21.690  6108  6671 I [CT]    : SP:AP:AnchorPersistenceRuntimeIpcServer: PostClientEvent for DiscoverSpaces finish event: requestHandle 2423, resultCode: 0
+09-20 00:56:21.690  6108  7446 I [CT]    : SP:AP:AnchorPersistenceRuntimeIpcServer: retrieveDiscoverSpacesEventData: clientId: 4042179282
+09-20 00:56:21.691  3727  6642 I [CT]    : SP:AF:InsightAnchorApi: coroDiscoverSpacesFlow (task finish) request: 2423
+09-20 00:56:21.692  3727  6664 I [CT]    : SP:AF:AnchorFramework: Received DiscoverSpaces found event returnCode: 0, numSpacesFound: 1, spacesFoundUuids: [ebf3e884-9e26-d4ca-c8a5-54d0f3ec9605], request: 2423, extension suite: ApiExtensionSuite::META(1), exp version: ExperimentalVersion::PROD(1)
+09-20 00:56:21.692  3727  6664 I [CT]    : SP:AF:AnchorFramework: Received DiscoverSpaces finish event returnCode: 0, request: 2423, extension suite: ApiExtensionSuite::META(1), exp version: ExperimentalVersion::PROD(1)
+09-20 00:56:21.692  3727  6664 I [CT]    : SP:AF:AnchorFramework: registerDiscoverSpacesEventHandler discoverSpacesComplete result code: 0
+09-20 00:56:21.701  3727  6054 I TREX    : Spatial Persistence event: DiscoverSpacesFound
+09-20 00:56:21.701  3727  6054 I TREX    : Updating enabled data components from query results for entity type 2
+09-20 00:56:21.701  3727  6054 I TREX    : Spatial Persistence event: spEvent_DiscoverSpacesFinish
+09-20 00:56:21.701  3727  6054 I OpenXR_local: RetrieveXrSpaceDiscoveryResultsMETA: cache size: 1
+09-20 00:56:21.701  3727  6054 W RuntimeTelemetryThread: [OpenXR_Anchor] component enabled cannot be changed; 4
+09-20 00:56:21.701  3727  6054 W RuntimeTelemetryThread: [OpenXR_Anchor] component enabled cannot be changed; 1000269000
+09-20 00:56:21.701  3727  6054 I GuardianTelemetry: [ovrStatsThreadGuardian::sendGuardianStateChangeTelemetry] Sending state change event ANCHOR_QUERY_FAILED, dialog 
+09-20 00:56:21.701  3727  6054 I GuardianTelemetry: [ovrStatsThreadGuardian::sendGuardianStateChangeTelemetry] Sending state change event GARBAGE_ANCHORS_RETURNED, dialog 
+09-20 00:56:21.703  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.714  3727  6054 I IStateMachineRecordKeeper: AddHistoryEntry AnchorQuery: Transition  Discovery -> ReadyToQuery | Discovery complete
+09-20 00:56:21.717  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.731  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.745  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.759  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.773  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.786  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.801  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.814  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.828  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.842  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.856  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.870  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.883  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.897  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.911  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.925  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.939  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.940  5192 18286 I VrApi   : FPS=72/72,Prd=23ms,Tear=0,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=3/3,1651/492MHz,OC=3F,TA=0/0/0,SP=N/N/N,Mem=2736MHz,Free=3527MB,PLS=0,Temp=56.0C/0.0C,TW=2.09ms,App=0.34ms,GD=0.23ms,CPU&GPU=7.07ms,LCnt=5(DR73,LM3),GPU%=0.23,CPU%=0.04(W0.06),CFL=11.69/15.44,ICFLp95=14.73,LD=0,SF=0.60,DpuScale=1.00,LP=0,DVFS=0,Preempt=251,PoseAgeP95=0.00
+09-20 00:56:21.953  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.955  3236 18327 I PassthroughInCompositorRenderer: PTINC FOVEAMETA gain=12.48 exposureMs=6.000 tempC=0.0 lux=291.6
+09-20 00:56:21.967  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.981  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:21.990   980 18234 I VD628x  : Flicker results: freq 1000.023743, max 1000.022888, dcr 21.235523, pct 0.178513, idx 0.050028, conf 0.804173, snr 6.267661, svm 0.076119, sus 1
+09-20 00:56:21.995  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.009  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.022  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.036  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.050  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.064  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.078  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.092  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.106  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.120  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.134  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.148  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.161  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.175  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.189  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.203  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.217  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.231  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.245  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.259  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.273  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.286  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.300  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.314  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.328  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.342  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.356  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.361  1264  1412 I MRSS    : MIXEDREALITY: MrFeatureTelemetry: sendComputeTelemetry: Logging telemetry.
+09-20 00:56:22.370  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.383  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.397  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.411  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.425  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.427  3236 18327 I ProxyToPassthroughLayerProcessor: ProcessPTProxyLayers: In/Out=2/1 PTApiLCnt=1 skipped=0
+09-20 00:56:22.439  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.453  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.467  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.469  3236 18327 I PassthroughInCompositorRenderer: PTINC: p2pLat: [40.05/0.01/40.06] ms, p2brLat: [27.15/0.11/27.32] ms [mean / stdev / p95]
+09-20 00:56:22.481  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.495  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.509  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.522  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.536  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.550  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.564  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.578  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.592  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.606  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.607  3236 18327 I [CT]    : MIXEDREALITY: PassthroughApiManager: GetUpdatedLayerState: (every 2 seconds) PT is: ON numLayers: 1
+09-20 00:56:22.610  3236 18327 I LayerRender: Explicit geometry layer count: 0, in slice 1
+09-20 00:56:22.620  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.634  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.647  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.661  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.675  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.689  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.700  3727  6054 I OpenXRAnchorDiscovery: xrDiscoverSpacesMETA: buildFilterMETA: filters is null
+09-20 00:56:22.700  3727  6054 I [CT]    : SP:AF:InsightAnchorApi: DiscoverSpaces (task start) flags: 32, request: 2424
+09-20 00:56:22.700  3727  6054 I IStateMachineRecordKeeper: AddHistoryEntry AnchorQuery: Transition  ReadyToQuery -> Discovery
+09-20 00:56:22.701  3727  6642 I [CT]    : SP:AF:InsightAnchorApi: coroDiscoverSpacesFlow (task start) request: 2424
+09-20 00:56:22.701  3727  6642 I [CT]    : SP:AF:AnchorFramework: coroDiscoverSpaces: filterInfo: flags: 96, numUuids: 0, radius: -1, enabledComponents: 0, maxNumSpacesToQuery: 0, groupUuids: , tags: , dataSource: 1, hasTrackableStateFilter: 1
+09-20 00:56:22.701  3727  6642 I [CT]    : SP:AF:AnchorFramework: Inserting discovery operation request handle 2424 -> extension suite ApiExtensionSuite::META(1) + exp version ExperimentalVersion::PROD(1) into map
+09-20 00:56:22.701  6108  6671 I [CT]    : SP:AP:AnchorPersistence: queryEntities: filterInfo: flags: 96, numUuids: 0, radius: -1, enabledComponents: 0, maxNumSpacesToQuery: 0, groupUuids: , tags: , dataSource: 1, hasTrackableStateFilter: 1, appId: com.oculus.guardian, request: 2424, appOpenXrVersion: 281479271678005
+09-20 00:56:22.701  6108  6671 I [CT]    : SP:AP:AnchorPersistence: discoverSpacesLocal: translateFilters complete. filterVector size: 2
+09-20 00:56:22.701  6108  6671 I [CT]    : SP:AP:AnchorPersistence:     Filter #0: type: AnchorDiscoveryFilterType::APP(3)
+09-20 00:56:22.701  6108  6671 I [CT]    : SP:AP:AnchorPersistence:     Filter #1: type: AnchorDiscoveryFilterType::TRACKABLE_STATE(8)
+09-20 00:56:22.701  6108  6671 I [CT]    : SP:AP:AnchorPersistence: discoverSpacesLocal: Scheduling local query for Anchors, with 2 filters, request: 2424
+09-20 00:56:22.701  6108  6671 I [CT]    : SP:AP:AnchorPersistence: discoverSpacesLocal Attempting local query, request: 2424
+09-20 00:56:22.701  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: operator() : No uuidFilter is provided
+09-20 00:56:22.701  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: appId com.oculus.guardian
+09-20 00:56:22.701  6108  6671 I [CT]    : SP:AP:AnchorLocalStorage: appId com.oculus.guardian loadOnlySceneModelAnchors false includeGuardianSpatialAnchor false
+09-20 00:56:22.701  6108  6671 I [CT]    : SP:AP:AnchorLocalStorage: listAllAnchors listed 1 anchors
+09-20 00:56:22.702  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: numAnchors obtained from local storage: 1
+09-20 00:56:22.702  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: waitForSlamLocalAnchorDiscovery:
+09-20 00:56:22.702  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: waitForSlamLocalAnchorDiscovery: resultCode: 13, numAnchors: 25, timestamp: 15486.156996000 [sec]
+09-20 00:56:22.702  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: filterByLocatable is true, filter by localized anchors
+09-20 00:56:22.702  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: num Slam LAD results: 25
+09-20 00:56:22.702  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: Filter anchors by component, uuid
+09-20 00:56:22.702  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: AnchorOpt uuid: ebf3e884-9e26-d4ca-c8a5-54d0f3ec9605
+09-20 00:56:22.702  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: anchorOpt uuid: ebf3e884-9e26-d4ca-c8a5-54d0f3ec9605, spatialAnchorRef uuid 134da70a-6db9-8021-abd0-235497430bf6 match successful
+09-20 00:56:22.702  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: operator(): Discovered 1 anchors locally
+09-20 00:56:22.702  6108  6671 I [CT]    : SP:AP:AnchorPersistence: discoverSpacesLocal queryResult success, request: 2424
+09-20 00:56:22.703  6108  6671 I [CT]    : SP:AP:AnchorPersistence: DiscoverSpaces local query success took: 0.001595834
+09-20 00:56:22.703  6108  6671 I [CT]    : SP:AP:AnchorPersistence: discoverSpacesLocal: Checking for killswitch based filtering
+09-20 00:56:22.703  6108  6671 I [CT]    : SP:SceneAnchorFilterUtil: filterOutEntitiesAndComponents : Guardian:true, App OpenXR Version patch:53 (vs. min patch without filtering 45), appIdInOverrideString:false, ocKillswitch:false, fsKillswitch:false
+09-20 00:56:22.703  6108  6671 I [CT]    : SP:AP:AnchorPersistenceConfig: operator(): Not updating anchor_persistence.anchor_discovery_batch_size as it was explicitly overwritten to 10
+09-20 00:56:22.703  6108  6671 I [CT]    : SP:AP:AnchorPersistence: Sending DiscoverSpaces found event with max spaces (Local) returnCode: 0, numSpacesFound: 1, request: 2424
+09-20 00:56:22.703  6108  6671 I [CT]    : SP:AP:AnchorPersistenceRuntimeIpcServer: PostClientEvent for DiscoverSpaces found event: requestHandle 2424, resultCode: 0
+09-20 00:56:22.703  6108  6671 I [CT]    : SP:AP:AnchorPersistence: DiscoverSpaces local query success finish took: 0.001698021
+09-20 00:56:22.703  6108  6671 I [CT]    : SP:AP:AnchorPersistence: Sending DiscoverSpaces finish event returnCode: 0, request: 2424
+09-20 00:56:22.703  6108  6671 I [CT]    : SP:AP:AnchorPersistenceRuntimeIpcServer: PostClientEvent for DiscoverSpaces finish event: requestHandle 2424, resultCode: 0
+09-20 00:56:22.703  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.703  6108  6671 I [CT]    : SP:AP:AnchorPersistenceRuntimeIpcServer: retrieveDiscoverSpacesEventData: clientId: 4042179282
+09-20 00:56:22.703  3727  6642 I [CT]    : SP:AF:InsightAnchorApi: coroDiscoverSpacesFlow (task finish) request: 2424
+09-20 00:56:22.704  3727  6664 I [CT]    : SP:AF:AnchorFramework: Received DiscoverSpaces found event returnCode: 0, numSpacesFound: 1, spacesFoundUuids: [ebf3e884-9e26-d4ca-c8a5-54d0f3ec9605], request: 2424, extension suite: ApiExtensionSuite::META(1), exp version: ExperimentalVersion::PROD(1)
+09-20 00:56:22.704  3727  6664 I [CT]    : SP:AF:AnchorFramework: Received DiscoverSpaces finish event returnCode: 0, request: 2424, extension suite: ApiExtensionSuite::META(1), exp version: ExperimentalVersion::PROD(1)
+09-20 00:56:22.704  3727  6664 I [CT]    : SP:AF:AnchorFramework: registerDiscoverSpacesEventHandler discoverSpacesComplete result code: 0
+09-20 00:56:22.714  3727  6054 I TREX    : Spatial Persistence event: DiscoverSpacesFound
+09-20 00:56:22.714  3727  6054 I TREX    : Updating enabled data components from query results for entity type 2
+09-20 00:56:22.714  3727  6054 I TREX    : Spatial Persistence event: spEvent_DiscoverSpacesFinish
+09-20 00:56:22.714  3727  6054 I OpenXR_local: RetrieveXrSpaceDiscoveryResultsMETA: cache size: 1
+09-20 00:56:22.714  3727  6054 W RuntimeTelemetryThread: [OpenXR_Anchor] component enabled cannot be changed; 4
+09-20 00:56:22.714  3727  6054 W RuntimeTelemetryThread: [OpenXR_Anchor] component enabled cannot be changed; 1000269000
+09-20 00:56:22.715  3727  6054 I GuardianTelemetry: [ovrStatsThreadGuardian::sendGuardianStateChangeTelemetry] Sending state change event ANCHOR_QUERY_FAILED, dialog 
+09-20 00:56:22.715  3727  6054 I GuardianTelemetry: [ovrStatsThreadGuardian::sendGuardianStateChangeTelemetry] Sending state change event GARBAGE_ANCHORS_RETURNED, dialog 
+09-20 00:56:22.717  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.728  3727  6054 I IStateMachineRecordKeeper: AddHistoryEntry AnchorQuery: Transition  Discovery -> ReadyToQuery | Discovery complete
+09-20 00:56:22.731  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.736   980 18234 I VD628x  : Flicker results: freq 1000.023071, max 1000.013184, dcr 20.382120, pct 0.190166, idx 0.053372, conf 0.833633, snr 7.247312, svm 0.081708, sus 1
+09-20 00:56:22.745  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.759  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.773  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.786  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.800  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.814  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.828  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.842  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.856  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.870  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.883  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.897  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.911  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.925  1264  1408 I MRSS    : TELEMETRY_COLLECTOR: [EVENT] Collected periodic telemetry from 0 aggregators.
+09-20 00:56:22.925  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.939  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.940  5192 18286 I VrApi   : FPS=73/72,Prd=23ms,Tear=0,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=3/3,1651/492MHz,OC=3F,TA=0/0/0,SP=N/N/N,Mem=2736MHz,Free=3527MB,PLS=0,Temp=56.0C/0.0C,TW=2.08ms,App=0.38ms,GD=0.23ms,CPU&GPU=7.48ms,LCnt=5(DR72,LM3),GPU%=0.23,CPU%=0.04(W0.05),CFL=11.78/15.35,ICFLp95=14.62,LD=0,SF=0.60,DpuScale=1.00,LP=0,DVFS=0,Preempt=242,PoseAgeP95=0.00
+09-20 00:56:22.953  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.962   963  1796 I Tracking: TRACKING: MrHandClient: [Throttled count=299] Hand PT mitigation - ptActive: true, dataUpToDate: true, connected: true, fidelityClientInitialized: true, fidelidyActive: true, camerasInitialized: true, hasEyeGeometry: true
+09-20 00:56:22.967  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.969  3236 18327 I PassthroughInCompositorRenderer: PTINC FOVEAMETA gain=12.48 exposureMs=6.000 tempC=0.0 lux=291.7
+09-20 00:56:22.981  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.994  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:22.997   963  1796 I Tracking: UnifiedHandBody: HandBodyPipeline FPS over 10.0s: IOBT=0.0/0.0 PoseSynth=0.0/0.0 CodecAvatar=0.0/0.0 (totals 0/0 0/0 0/0)
+09-20 00:56:23.009  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.022  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.036  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.050  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.064  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.078  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.092  3236  3719 I FaceEyeTrackingServerManager_Impl: [FaceEyeTrackingServerManager] - orthofitManager is NULL.
+09-20 00:56:23.092  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.106  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.114   982  3901 I libcamerahal: [INSIGHTS][2.00s] heartbeat: [cam2: (2: 60/60/0)] [cam3: (2: 60/60/0)]
+09-20 00:56:23.114   982  3901 I libcamerahal: [INSIGHTS][2.00s] heartbeat: [cam0: (2: 60/60/0)] [cam1: (2: 60/60/0)]
+09-20 00:56:23.120  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.133  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.147  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.161  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.176  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.189  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.203  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.217  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.229  1264 25879 I MRSS    : EvaController: Sessions: CvpPreprocessor(DSP)(Running) with 4 handles: WARP(150),PYRAMID(150),WARP(150),PYRAMID(150),; 
+09-20 00:56:23.231  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.244  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.259  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.272  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.286  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.300  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.314  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.328  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.342  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.356  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.369  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.383  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.397  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.411  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.425  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.439  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.446  5192  5616 I Shell   : remove cursor: 4081053615 (new count: 0)
+09-20 00:56:23.453  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.467  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.477   980 18234 I VD628x  : Flicker results: freq 1000.022888, max 1000.016846, dcr 19.700310, pct 0.217003, idx 0.056298, conf 0.851669, snr 7.782039, svm 0.086739, sus 1
+09-20 00:56:23.481  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.494  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.509  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.522  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.536  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.550  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.564  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.578  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.592  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.606  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.614   982  3901 I libcamerahal: [INSIGHTS][2.00s] heartbeat: [cam4: (13: 144/145/0)] [cam5: (13: 145/145/0)]
+09-20 00:56:23.620  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.633  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.647  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.661  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.675  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.689  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.703  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.714  3727  6054 I OpenXRAnchorDiscovery: xrDiscoverSpacesMETA: buildFilterMETA: filters is null
+09-20 00:56:23.714  3727  6054 I [CT]    : SP:AF:InsightAnchorApi: DiscoverSpaces (task start) flags: 32, request: 2425
+09-20 00:56:23.714  3727  6054 I IStateMachineRecordKeeper: AddHistoryEntry AnchorQuery: Transition  ReadyToQuery -> Discovery
+09-20 00:56:23.715  3727  6642 I [CT]    : SP:AF:InsightAnchorApi: coroDiscoverSpacesFlow (task start) request: 2425
+09-20 00:56:23.715  3727  6642 I [CT]    : SP:AF:AnchorFramework: coroDiscoverSpaces: filterInfo: flags: 96, numUuids: 0, radius: -1, enabledComponents: 0, maxNumSpacesToQuery: 0, groupUuids: , tags: , dataSource: 1, hasTrackableStateFilter: 1
+09-20 00:56:23.715  3727  6642 I [CT]    : SP:AF:AnchorFramework: Inserting discovery operation request handle 2425 -> extension suite ApiExtensionSuite::META(1) + exp version ExperimentalVersion::PROD(1) into map
+09-20 00:56:23.715  6108  6671 I [CT]    : SP:AP:AnchorPersistence: queryEntities: filterInfo: flags: 96, numUuids: 0, radius: -1, enabledComponents: 0, maxNumSpacesToQuery: 0, groupUuids: , tags: , dataSource: 1, hasTrackableStateFilter: 1, appId: com.oculus.guardian, request: 2425, appOpenXrVersion: 281479271678005
+09-20 00:56:23.715  6108  6671 I [CT]    : SP:AP:AnchorPersistence: discoverSpacesLocal: translateFilters complete. filterVector size: 2
+09-20 00:56:23.715  6108  6671 I [CT]    : SP:AP:AnchorPersistence:     Filter #0: type: AnchorDiscoveryFilterType::APP(3)
+09-20 00:56:23.715  6108  6671 I [CT]    : SP:AP:AnchorPersistence:     Filter #1: type: AnchorDiscoveryFilterType::TRACKABLE_STATE(8)
+09-20 00:56:23.715  6108  6671 I [CT]    : SP:AP:AnchorPersistence: discoverSpacesLocal: Scheduling local query for Anchors, with 2 filters, request: 2425
+09-20 00:56:23.715  6108  6671 I [CT]    : SP:AP:AnchorPersistence: discoverSpacesLocal Attempting local query, request: 2425
+09-20 00:56:23.715  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: operator() : No uuidFilter is provided
+09-20 00:56:23.715  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: appId com.oculus.guardian
+09-20 00:56:23.715  6108  6671 I [CT]    : SP:AP:AnchorLocalStorage: appId com.oculus.guardian loadOnlySceneModelAnchors false includeGuardianSpatialAnchor false
+09-20 00:56:23.715  6108  6671 I [CT]    : SP:AP:AnchorLocalStorage: listAllAnchors listed 1 anchors
+09-20 00:56:23.716  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: numAnchors obtained from local storage: 1
+09-20 00:56:23.716  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: waitForSlamLocalAnchorDiscovery:
+09-20 00:56:23.717  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: waitForSlamLocalAnchorDiscovery: resultCode: 13, numAnchors: 25, timestamp: 15486.956964000 [sec]
+09-20 00:56:23.717  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: filterByLocatable is true, filter by localized anchors
+09-20 00:56:23.717  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.717  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: num Slam LAD results: 25
+09-20 00:56:23.717  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: Filter anchors by component, uuid
+09-20 00:56:23.717  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: AnchorOpt uuid: ebf3e884-9e26-d4ca-c8a5-54d0f3ec9605
+09-20 00:56:23.717  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: applyFilters: anchorOpt uuid: ebf3e884-9e26-d4ca-c8a5-54d0f3ec9605, spatialAnchorRef uuid 134da70a-6db9-8021-abd0-235497430bf6 match successful
+09-20 00:56:23.717  6108  6671 I [CT]    : SP:AP:AnchorLocalStorageQuery: operator(): Discovered 1 anchors locally
+09-20 00:56:23.717  6108  6671 I [CT]    : SP:AP:AnchorPersistence: discoverSpacesLocal queryResult success, request: 2425
+09-20 00:56:23.717  6108  6671 I [CT]    : SP:AP:AnchorPersistence: DiscoverSpaces local query success took: 0.002144948
+09-20 00:56:23.717  6108  6671 I [CT]    : SP:AP:AnchorPersistence: discoverSpacesLocal: Checking for killswitch based filtering
+09-20 00:56:23.717  6108  6671 I [CT]    : SP:SceneAnchorFilterUtil: filterOutEntitiesAndComponents : Guardian:true, App OpenXR Version patch:53 (vs. min patch without filtering 45), appIdInOverrideString:false, ocKillswitch:false, fsKillswitch:false
+09-20 00:56:23.717  6108  6671 I [CT]    : SP:AP:AnchorPersistenceConfig: operator(): Not updating anchor_persistence.anchor_discovery_batch_size as it was explicitly overwritten to 10
+09-20 00:56:23.717  6108  6671 I [CT]    : SP:AP:AnchorPersistence: Sending DiscoverSpaces found event with max spaces (Local) returnCode: 0, numSpacesFound: 1, request: 2425
+09-20 00:56:23.717  6108  6671 I [CT]    : SP:AP:AnchorPersistenceRuntimeIpcServer: PostClientEvent for DiscoverSpaces found event: requestHandle 2425, resultCode: 0
+09-20 00:56:23.717  6108  6671 I [CT]    : SP:AP:AnchorPersistence: DiscoverSpaces local query success finish took: 0.002242709
+09-20 00:56:23.717  6108  6671 I [CT]    : SP:AP:AnchorPersistence: Sending DiscoverSpaces finish event returnCode: 0, request: 2425
+09-20 00:56:23.717  6108  6671 I [CT]    : SP:AP:AnchorPersistenceRuntimeIpcServer: PostClientEvent for DiscoverSpaces finish event: requestHandle 2425, resultCode: 0
+09-20 00:56:23.717  6108  7446 I [CT]    : SP:AP:AnchorPersistenceRuntimeIpcServer: retrieveDiscoverSpacesEventData: clientId: 4042179282
+09-20 00:56:23.719  3727  6642 I [CT]    : SP:AF:InsightAnchorApi: coroDiscoverSpacesFlow (task finish) request: 2425
+09-20 00:56:23.719  3727  6664 I [CT]    : SP:AF:AnchorFramework: Received DiscoverSpaces found event returnCode: 0, numSpacesFound: 1, spacesFoundUuids: [ebf3e884-9e26-d4ca-c8a5-54d0f3ec9605], request: 2425, extension suite: ApiExtensionSuite::META(1), exp version: ExperimentalVersion::PROD(1)
+09-20 00:56:23.719  3727  6664 I [CT]    : SP:AF:AnchorFramework: Received DiscoverSpaces finish event returnCode: 0, request: 2425, extension suite: ApiExtensionSuite::META(1), exp version: ExperimentalVersion::PROD(1)
+09-20 00:56:23.719  3727  6664 I [CT]    : SP:AF:AnchorFramework: registerDiscoverSpacesEventHandler discoverSpacesComplete result code: 0
+09-20 00:56:23.723  1240  1931 D telemetry-tokenbucket: Quota event rate (volume per 60 second) exceeds max, rejecting, process: com.oculus.vrdriver, rate: 284253 , max: 283000
+09-20 00:56:23.728  3727  6054 I TREX    : Spatial Persistence event: DiscoverSpacesFound
+09-20 00:56:23.729  3727  6054 I TREX    : Updating enabled data components from query results for entity type 2
+09-20 00:56:23.729  3727  6054 I TREX    : Spatial Persistence event: spEvent_DiscoverSpacesFinish
+09-20 00:56:23.729  3727  6054 I OpenXR_local: RetrieveXrSpaceDiscoveryResultsMETA: cache size: 1
+09-20 00:56:23.729  3727  6054 W RuntimeTelemetryThread: [OpenXR_Anchor] component enabled cannot be changed; 4
+09-20 00:56:23.729  3727  6054 W RuntimeTelemetryThread: [OpenXR_Anchor] component enabled cannot be changed; 1000269000
+09-20 00:56:23.729  3727  6054 I GuardianTelemetry: [ovrStatsThreadGuardian::sendGuardianStateChangeTelemetry] Sending state change event ANCHOR_QUERY_FAILED, dialog 
+09-20 00:56:23.729  3727  6054 I GuardianTelemetry: [ovrStatsThreadGuardian::sendGuardianStateChangeTelemetry] Sending state change event GARBAGE_ANCHORS_RETURNED, dialog 
+09-20 00:56:23.731  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.738  5192  5616 I Shell   : add cursor: 4081053615 (new count: 1)
+09-20 00:56:23.742  3727  6054 I IStateMachineRecordKeeper: AddHistoryEntry AnchorQuery: Transition  Discovery -> ReadyToQuery | Discovery complete
+09-20 00:56:23.745  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.759  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.772  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.786  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.800  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.814  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.828  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.842  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.856  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.869  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.884  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.897  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.911  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.925  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.939  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.940  5192 18286 I VrApi   : FPS=72/72,Prd=22ms,Tear=0,Early=0,Stale=1,Stale2/5/10/max=0/0/0/1,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=3/3,1651/492MHz,OC=3F,TA=0/0/0,SP=N/N/N,Mem=2736MHz,Free=3527MB,PLS=0,Temp=56.0C/0.0C,TW=2.09ms,App=0.37ms,GD=0.23ms,CPU&GPU=7.40ms,LCnt=5(DR72,LM3),GPU%=0.23,CPU%=0.03(W0.03),CFL=11.65/15.45,ICFLp95=14.64,LD=0,SF=0.60,DpuScale=1.00,LP=0,DVFS=0,Preempt=242,PoseAgeP95=0.00
+09-20 00:56:23.940   963  1791 I Tracking: Vega: [INSIGHTS] Mode=DescriptorVega,6DoF,Agg=3s,Inl=14,21,25,Mem=107.5,FrameDur=6.7,8.9,PoseLat=1.5,2.1,CamImuLat=24.3,30.5,Jit=0.0,0.0,Drops(Cam=0,IMU=0),MeanIr=703.6,Exp(7.1ms,g=10,I=59)(7.1ms,g=10,I=59)(9.3ms,g=13,I=60)(8.1ms,g=11,I=59)(0.0ms,g=0)(0.0ms,g=0)
+09-20 00:56:23.953  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.967  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.981  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:23.982  3236 18327 I PassthroughInCompositorRenderer: PTINC FOVEAMETA gain=12.48 exposureMs=6.000 tempC=0.0 lux=292.4
+09-20 00:56:23.994  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.008  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.022  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.036  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.050  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.064  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.078  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+--------- beginning of tracking
+09-20 00:56:24.086   963  1792 W TrackingService: 13 late Color frame set were dropped: timestamp 15487.585578, current monochrome 15487.590272
+09-20 00:56:24.092  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.106  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.120  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.133  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.148  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.161  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.175  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.175   924  1497 I PAL: SessionAlsaPcm: setParameters: 2515: mixer set module config status=0
+--------- beginning of kernel
+09-20 00:56:24.152     0     0 W healthd : battery l=36 v=3575 t=54.0 h=2 st=3 c=-2547060 fc=4535000 cc=71 chg=
+09-20 00:56:24.189  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.203  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.217  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.224   980 18234 I VD628x  : Flicker results: freq 1000.022888, max 1000.025146, dcr 19.112280, pct 0.222308, idx 0.061669, conf 0.867543, snr 8.420659, svm 0.091052, sus 1
+09-20 00:56:24.228   963 18230 I Tracking: BOLT:HexagonTelemetry: Global DSP utilization: 30.53% (1528 / 5006 ms), Scalar Util: 58.69%, HVX Util: 50.17%, HMX Util: 22.80%, DMA Active: 0.00%, Freq: 1171.1999999999998 MHz, GetPmu: 1.25 ms
+09-20 00:56:24.229   963 18230 I Tracking: boltlib: DSP Rpc stats over 5006 ms: {"GraphModule":150,"HexagonPyramid3x3Async":59,"dpe_inference_v2_10928":151,"dpe_inference_v2_10929":151,"iobt_encoder_boltnn_delegate":150}
+09-20 00:56:24.231  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.244  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.258  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.272  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.286  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.300  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.314  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.328  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.342  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.356  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.370  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.383  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.397  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.412  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.425  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.439  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.453  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.467  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.481  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.495  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.509  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.513  1240  2087 V telemetry-statsd: Fetched statsd reports. Config: 2 UID 1000 Initiator: periodic Report size: 41030
+09-20 00:56:24.513  1240  2087 V telemetry-statsd: Fetched statsd reports. Config: 12 UID 1000 Initiator: periodic Report size: 117542
+09-20 00:56:24.513  1240  2087 V telemetry-statsd: Fetched statsd reports. Config: 3 UID 1000 Initiator: periodic Report size: 13404
+09-20 00:56:24.513  1240  2087 V telemetry-statsd: Fetched statsd reports. Config: 5 UID 1000 Initiator: periodic Report size: 13494
+09-20 00:56:24.513  1240  2087 V telemetry-statsd: Fetched statsd reports. Config: 6 UID 1000 Initiator: periodic Report size: 10920
+09-20 00:56:24.513  1240  2087 V telemetry-statsd: Fetched statsd reports. Config: 7 UID 1000 Initiator: periodic Report size: 10920
+09-20 00:56:24.513  1240  2087 V telemetry-statsd: Fetched statsd reports. Config: 10 UID 1000 Initiator: periodic Report size: 15161
+09-20 00:56:24.513  1240  2087 V telemetry-statsd: Fetched statsd reports. Config: 11 UID 1000 Initiator: periodic Report size: 10920
+09-20 00:56:24.513  1240  2087 V telemetry-statsd: Fetched statsd reports. Config: 1 UID 1000 Initiator: periodic Report size: 10920
+09-20 00:56:24.513  1240  2087 V telemetry-statsd: Fetched statsd reports. Config: 22 UID 1000 Initiator: periodic Report size: 10920
+09-20 00:56:24.522  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.536  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
+09-20 00:56:24.537  1264  1767 W MRSS    : WatchdogsChecker: Overslept the timer by 5714us (maximum 5ms or 5000us), callbacks may be delayed
+09-20 00:56:24.550  3236  3719 W ClientMgrApertures: UpdateApertureCompositorData: skipping aperture 28ffea77-e781-4f1a-a1d9-4d66f74d534f (gotState=1, active=0)
