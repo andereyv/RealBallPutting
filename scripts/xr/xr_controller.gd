@@ -35,7 +35,9 @@ enum SplitOrientation {
 @export_group("Putting Dynamics & Force")
 @export var putt_force_multiplier: float = 1.0 ## Calibrated 1:1 physical mat roll scaling factor (1.0 = direct measured velocity)
 @export var use_speed_v2: bool = true ## Speed v2: floor-plane reconstruction + least-squares fit (falls back to photocell gate if invalid)
-@export var physical_mat_stimp: float = 14.5 ## Stimp of the PHYSICAL mat, used to extrapolate measured speed back to the spawn point
+@export var auto_record_sessions: bool = true ## DEV: start a session recording automatically when the app starts (stops when the headset is taken off / after 5 min)
+@export var use_camera_intrinsics: bool = true ## Replace camera_hfov/vfov/tilt with the factory lens calibration reported by the camera (logged at startup)
+@export var physical_mat_stimp: float = 12.8 ## Effective Stimp of the PHYSICAL mat, fitted 2026-09-20 to 11 putts with measured roll (rms 5%)
 
 @export_group("Golfer Profile")
 @export var golfer_handedness: String = "right" ## "right" = Right-handed golfer; "left" = Left-handed golfer
@@ -107,6 +109,22 @@ var _tee_realign_mesh: MeshInstance3D = null
 var _tee_realign_mat: StandardMaterial3D = null
 var _tee_realign_label: Label3D = null
 var _tee_sim_btn: Node3D = null
+# Extra floor buttons (hand-pinch friendly): session recorder + green speed
+var _tee_rec_btn: Node3D = null
+var _tee_rec_mat: StandardMaterial3D = null
+var _tee_rec_label: Label3D = null
+var _tee_green_btn: Node3D = null
+var _tee_green_mat: StandardMaterial3D = null
+var _tee_green_label: Label3D = null
+var _rec_active := false
+var _rec_dir := ""
+var _rec_started_s := 0.0
+var _rec_poll_timer := 0.0
+var _rec_manual_stop := false # set when YOU stop a recording; blocks the automatic restart
+var _rec_autostart_timer := 5.0
+var _record_session_requested := false # set from the menu's RECORD SESSION toggle; starts at stance selection
+var _rec_hands_tick := 0
+var _pinch_released := true # a pinch must be released before it can press another floor button (was re-triggering REC/SIM/GREEN)
 var _tee_sim_mesh: MeshInstance3D = null
 var _tee_sim_mat: StandardMaterial3D = null
 var _tee_sim_label: Label3D = null
@@ -146,6 +164,10 @@ var _head_pos_history: Array[Dictionary] = [] # Rolling buffer of {"time": float
 const PuttSpeedEstimator = preload("res://scripts/physics/putt_speed_estimator.gd")
 var _cam_pose_history: Array[Dictionary] = [] # Speed v2: {"t": float (ticks sec), "xf": Transform3D} last ~1 s
 var _last_speed_v2: Dictionary = {}
+var green_speed_mode: String = "mat" ## Green speed preset: mat / slow / normal / fast (see CourseManager)
+var _cam_calib: PackedFloat32Array = PackedFloat32Array() # [valid, fx, fy, cx, cy, activeW, activeH, streamW, streamH, tx, ty, tz, qx, qy, qz, qw, tsSource]
+var _cam_calib_applied := false
+var _cam_calib_poll_timer := 0.0
 var _candidate_stroke_pos: Vector2 = Vector2.ZERO
 var _candidate_stroke_time: float = 0.0
 var _candidate_stroke_count: int = 0
@@ -242,6 +264,9 @@ func _ready() -> void:
 	_ensure_hand_visualizers()
 	_init_xr_subsystem()
 	_load_tee_box_settings()
+	call_deferred("_apply_green_speed", green_speed_mode, false)
+	if auto_record_sessions:
+		get_tree().create_timer(3.0).timeout.connect(_auto_start_recording)
 	_init_audio()
 	_connect_multiplayer_signals()
 	call_deferred("_setup_split_screen")
@@ -502,7 +527,55 @@ func _connect_menu_signals() -> void:
 			game_menu.connect("play_pressed", _on_game_menu_play_pressed)
 		if game_menu.has_signal("handedness_selected") and not game_menu.is_connected("handedness_selected", _on_game_menu_handedness_selected):
 			game_menu.connect("handedness_selected", _on_game_menu_handedness_selected)
+		if game_menu.has_signal("record_session_toggled") and not game_menu.is_connected("record_session_toggled", _on_record_session_toggled):
+			game_menu.connect("record_session_toggled", _on_record_session_toggled)
+		if game_menu.has_signal("green_speed_selected") and not game_menu.is_connected("green_speed_selected", _on_green_speed_selected):
+			game_menu.connect("green_speed_selected", _on_green_speed_selected)
+		if game_menu.has_method("setup_green_speed_selector"):
+			game_menu.call("setup_green_speed_selector", CourseManager.GREEN_SPEED_PRESETS, green_speed_mode, physical_mat_stimp)
 		print("[XRController] Connected to GameMenu signals.")
+
+# ------------------------------------------------------------------ Green speed presets
+func _get_course_manager():
+	if test_green_controller != null:
+		var cm = test_green_controller.get("course_manager")
+		if cm != null:
+			return cm
+	return null
+
+func _apply_green_speed(mode: String, announce: bool = true) -> void:
+	green_speed_mode = mode
+	var stimp := physical_mat_stimp
+	var cm = _get_course_manager()
+	if cm != null:
+		stimp = cm.set_green_speed(mode, physical_mat_stimp)
+	elif golf_ball != null:
+		for p in CourseManager.GREEN_SPEED_PRESETS:
+			if p["id"] == mode and float(p["stimp"]) > 0.0:
+				stimp = float(p["stimp"])
+		golf_ball.set("stimp_rating", stimp)
+	if game_menu != null and game_menu.has_method("set_selected_green_speed"):
+		game_menu.call("set_selected_green_speed", mode)
+	_update_green_button_label()
+	if announce:
+		var label := mode.to_upper()
+		for p in CourseManager.GREEN_SPEED_PRESETS:
+			if p["id"] == mode:
+				label = str(p["label"])
+		_record_event("GREEN SPEED: %s (Stimp %.1f)" % [label, stimp])
+		if _tee_telemetry_label != null:
+			_tee_telemetry_label.text = "GREEN SPEED: %s\nStimp %.1f" % [label, stimp]
+		_save_tee_box_settings()
+
+func _on_green_speed_selected(mode: String) -> void:
+	_apply_green_speed(mode, true)
+
+func cycle_green_speed() -> void:
+	var ids := []
+	for p in CourseManager.GREEN_SPEED_PRESETS:
+		ids.append(p["id"])
+	var idx := ids.find(green_speed_mode)
+	_apply_green_speed(ids[(idx + 1) % ids.size()], true)
 
 func _on_game_menu_play_pressed() -> void:
 	current_flow_state = GameFlowState.HANDEDNESS_SELECT
@@ -586,6 +659,11 @@ func _init_xr_subsystem() -> void:
 			xr_interface.session_begun.connect(_on_session_begun)
 		if xr_interface.has_signal("session_focussed"):
 			xr_interface.session_focussed.connect(_on_session_focussed)
+		if xr_interface.has_signal("session_stopping"):
+			xr_interface.session_stopping.connect(func(): _stop_recording_if_active("XR session stopping"))
+		if xr_interface.has_signal("session_visible"):
+			# FOCUSED -> VISIBLE happens when the headset is taken off (or a system overlay takes focus)
+			xr_interface.session_visible.connect(func(): _stop_recording_if_active("headset focus lost"))
 
 		# Query and configure OpenXR display refresh rate (Meta Quest Store target: 90 Hz / baseline 72 Hz)
 		var oxr = xr_interface as OpenXRInterface if xr_interface is OpenXRInterface else null
@@ -636,6 +714,38 @@ func _process(delta: float) -> void:
 		_cam_pose_history.append({"t": now_s, "xf": xr_camera.global_transform})
 		while _cam_pose_history.size() > 2 and now_s - float(_cam_pose_history[0]["t"]) > 1.2:
 			_cam_pose_history.pop_front()
+
+		# Session recorder: stream head pose (position + quaternion) and keep the REC label up to date
+		if _rec_active:
+			var rb = _get_bridge_class()
+			if rb != null:
+				var q: Quaternion = cur_basis.get_rotation_quaternion()
+				rb.recordHeadPose(cur_pos.x, cur_pos.y, cur_pos.z, q.x, q.y, q.z, q.w)
+				_rec_hands_tick += 1
+				if _rec_hands_tick % 2 == 0:
+					rb.recordEvent(_hands_state_json())
+				_rec_poll_timer -= delta
+				if _rec_poll_timer <= 0.0:
+					_rec_poll_timer = 0.5
+					if not rb.isSessionRecording():
+						_on_recording_stopped("time limit reached")
+					elif _tee_rec_label != null:
+						var secs := int(Time.get_ticks_msec() / 1000.0 - _rec_started_s)
+						_tee_rec_label.text = "■ STOP  %d:%02d" % [secs / 60, secs % 60]
+
+		# Auto-record: if a recording stopped for any reason (app pause, headset off, focus loss), start a new one
+		if auto_record_sessions and not _rec_active and not _rec_manual_stop:
+			_rec_autostart_timer -= delta
+			if _rec_autostart_timer <= 0.0:
+				_rec_autostart_timer = 5.0
+				_auto_start_recording()
+
+		# Pick up the camera's factory lens calibration once it is available
+		if not _cam_calib_applied:
+			_cam_calib_poll_timer -= delta
+			if _cam_calib_poll_timer <= 0.0:
+				_cam_calib_poll_timer = 1.0
+				_try_apply_camera_calibration()
 
 		# Feed live head pose to HeadsetCameraBridge for streaming HUD
 		var bridge = _get_bridge_class()
@@ -920,16 +1030,25 @@ func _process(delta: float) -> void:
 					elif loc.distance_to(sim_btn_local) < 0.16:
 						hover_target = "SIM_BTN"
 						hover_spot = _tee_box_marker.global_transform * sim_btn_local
+					elif loc.distance_to(Vector3(0.39, 0.05, 0.38)) < 0.13:
+						hover_target = "REC_BTN"
+						hover_spot = _tee_box_marker.global_transform * Vector3(0.39, 0.05, 0.38)
+					elif loc.distance_to(Vector3(-0.39, 0.05, 0.38)) < 0.13:
+						hover_target = "GREEN_BTN"
+						hover_spot = _tee_box_marker.global_transform * Vector3(-0.39, 0.05, 0.38)
 					else:
 						hover_target = "NONE"
 				else:
 					hover_target = "NONE"
 				
 				# Grab Initiation on active controller:
+				if not active_is_hand or active_pinch > 0.055:
+					_pinch_released = true
 				if hover_target != "NONE" and _grab_cooldown <= 0.0:
 					var grab_triggered = false
 					var grab_src = ""
-					if active_is_hand and active_pinch < 0.038:
+					if active_is_hand and active_pinch < 0.038 and _pinch_released:
+						_pinch_released = false
 						grab_triggered = true
 						grab_src = active_aim_hand + "_pinch"
 					elif not active_is_hand:
@@ -950,6 +1069,12 @@ func _process(delta: float) -> void:
 						elif hover_target == "SIM_BTN":
 							simulate_putt()
 							_grab_cooldown = 0.40
+						elif hover_target == "REC_BTN":
+							toggle_session_recording()
+							_grab_cooldown = 0.80
+						elif hover_target == "GREEN_BTN":
+							cycle_green_speed()
+							_grab_cooldown = 0.60
 						else:
 							_drag_source = grab_src
 							_grab_initial_offset = tee_box_pos - _smoothed_floor_aim
@@ -984,6 +1109,10 @@ func _process(delta: float) -> void:
 				var is_hconf = (hover_target == "CONFIRM_BTN")
 				var is_hreal = (hover_target == "REALIGN_BTN")
 				var is_hsim = (hover_target == "SIM_BTN")
+				if _tee_rec_btn != null:
+					_tee_rec_btn.scale = Vector3(1.15, 1.15, 1.15) if hover_target == "REC_BTN" else Vector3.ONE
+				if _tee_green_btn != null:
+					_tee_green_btn.scale = Vector3(1.15, 1.15, 1.15) if hover_target == "GREEN_BTN" else Vector3.ONE
 				
 				if _tee_rot_handle_l != null:
 					_tee_rot_handle_l.scale = Vector3(1.35, 1.35, 1.35) if is_hl else Vector3(1.0, 1.0, 1.0)
@@ -1060,7 +1189,7 @@ func _process(delta: float) -> void:
 				if _tee_realign_btn != null:
 					_tee_realign_btn.visible = true
 				if _tee_sim_btn != null:
-					_tee_sim_btn.visible = true
+					_tee_sim_btn.visible = true; _set_extra_floor_btns_visible(true)
 				
 				if _tee_lock_settle_timer > 0.0:
 					_tee_lock_settle_timer -= delta
@@ -1209,7 +1338,7 @@ func _process(delta: float) -> void:
 				if _tee_realign_btn != null:
 					_tee_realign_btn.visible = false
 				if _tee_sim_btn != null:
-					_tee_sim_btn.visible = false
+					_tee_sim_btn.visible = false; _set_extra_floor_btns_visible(false)
 				if _tee_ball_spot_mat != null:
 					_tee_ball_spot_mat.albedo_color = Color(0.2, 0.85, 1.0, 0.85)
 				
@@ -1660,8 +1789,16 @@ func _ensure_tee_box_marker() -> void:
 		_tee_sim_label.position = Vector3(0.0, 0.038, 0.0)
 		_tee_sim_label.modulate = Color(0.4, 1.0, 0.8, 0.95)
 		_tee_sim_btn.add_child(_tee_sim_label)
-		_tee_sim_btn.visible = is_tee_confirmed
+		_tee_sim_btn.visible = is_tee_confirmed; _set_extra_floor_btns_visible(is_tee_confirmed)
 		_tee_box_marker.add_child(_tee_sim_btn)
+
+		# [ ● REC ] session recorder (right of SIMULATE) and [ GREEN ] speed selector (left of ADJUST TEE)
+		var rec_parts := _make_floor_button("RecordButton", Vector3(0.39, 0.05, 0.38), Color(0.45, 0.08, 0.08, 0.85), "● REC", Color(1.0, 0.6, 0.6, 0.95))
+		_tee_rec_btn = rec_parts[0]; _tee_rec_mat = rec_parts[1]; _tee_rec_label = rec_parts[2]
+		var green_parts := _make_floor_button("GreenSpeedButton", Vector3(-0.39, 0.05, 0.38), Color(0.08, 0.35, 0.15, 0.85), "GREEN", Color(0.6, 1.0, 0.7, 0.95))
+		_tee_green_btn = green_parts[0]; _tee_green_mat = green_parts[1]; _tee_green_label = green_parts[2]
+		_update_green_button_label()
+		_set_extra_floor_btns_visible(is_tee_confirmed)
 		
 		# --- Dedicated Ball Tracking Circle Group (Visible during putting) ---
 		_tee_ball_spot_mat = StandardMaterial3D.new()
@@ -2107,7 +2244,9 @@ func _on_physical_ball_detected(norm_x: float, norm_y: float, norm_w: float = 0.
 				# A single-frame YOLO jump or putter occlusion must never trigger a putt.
 				# When forward displacement and velocity exceed address threshold,
 				# enter STROKE_DETECTED to track and verify consecutive moving samples.
-				if fwd_disp >= 0.08 and instant_speed >= 0.18 and lat_disp <= 0.18:
+				# Speed v2: the camera tracker (PuttTracker) is the only putt source. The old YOLO 2-point path measured
+				# with the wrong scale and fired a 1.37 m/s putt the tracker had correctly measured at ~0.9 m/s.
+				if not use_speed_v2 and fwd_disp >= 0.08 and instant_speed >= 0.18 and lat_disp <= 0.18:
 					# Gate Entrance: Point 1 (P1)
 					ball_tracking_state = BallTrackingState.STROKE_DETECTED
 					_stroke_measuring_timer = 0.0
@@ -2392,6 +2531,65 @@ func _norm_cam_to_floor(norm: Vector2, head_xf: Transform3D, plane_y: float) -> 
 	var k := (plane_y - cam_origin.y) / dir.y
 	return cam_origin + dir * k
 
+## Pixel scale from the sensor's active array to the stream (the stream is scaled, then center-cropped: 1280x1280 -> 640x480)
+func _calib_stream_params() -> Dictionary:
+	if _cam_calib.size() < 9 or _cam_calib[0] < 0.5:
+		return {}
+	var aw: float = _cam_calib[5]
+	var ah: float = _cam_calib[6]
+	var sw: float = _cam_calib[7]
+	var sh: float = _cam_calib[8]
+	var sc: float = maxf(sw / aw, sh / ah)
+	var off_x: float = (aw * sc - sw) * 0.5
+	var off_y: float = (ah * sc - sh) * 0.5
+	return {"fx": _cam_calib[1] * sc, "fy": _cam_calib[2] * sc,
+		"cx": _cam_calib[3] * sc - off_x, "cy": _cam_calib[4] * sc - off_y, "w": sw, "h": sh}
+
+## Same as _norm_cam_to_floor but using the camera's reported intrinsics (fx, fy, cx, cy) for the ray direction.
+func _norm_cam_to_floor_intr(norm: Vector2, head_xf: Transform3D, plane_y: float) -> Vector3:
+	var k := _calib_stream_params()
+	if k.is_empty():
+		return Vector3(NAN, NAN, NAN)
+	var px: float = norm.x * float(k.w)
+	var py: float = norm.y * float(k.h)
+	var cam_origin: Vector3 = head_xf.origin + head_xf.basis * Vector3(camera_x_offset_m, camera_y_offset_m, camera_z_offset_m)
+	var cam_basis: Basis = head_xf.basis * Basis(Vector3.RIGHT, deg_to_rad(-camera_optical_tilt_deg))
+	var dir: Vector3 = cam_basis * Vector3((px - float(k.cx)) / float(k.fx), -(py - float(k.cy)) / float(k.fy), -1.0)
+	if dir.y > -1e-4:
+		return Vector3(NAN, NAN, NAN)
+	var t := (plane_y - cam_origin.y) / dir.y
+	return cam_origin + dir * t
+
+## Replaces the hand-tuned camera_hfov/vfov/tilt with the camera's factory calibration.
+## The old values (96 x 72 deg) made every distance ~1.5x too long, which is why speeds read ~1.5x too high.
+func _try_apply_camera_calibration() -> void:
+	var bridge = _get_bridge_class()
+	if bridge == null:
+		return
+	var c = bridge.getCameraCalibration()
+	if c == null or c.size() < 9 or float(c[0]) < 0.5:
+		return
+	_cam_calib = PackedFloat32Array(c)
+	_cam_calib_applied = true
+	var k := _calib_stream_params()
+	var hfov := rad_to_deg(2.0 * atan((float(k.w) * 0.5) / float(k.fx)))
+	var vfov := rad_to_deg(2.0 * atan((float(k.h) * 0.5) / float(k.fy)))
+	# Lens rotation quaternion = 180 deg flip about X (camera convention) + the downward tilt
+	var tilt := camera_optical_tilt_deg
+	if _cam_calib.size() >= 16:
+		var qw: float = absf(_cam_calib[15])
+		var ang := rad_to_deg(2.0 * acos(clampf(qw, 0.0, 1.0)))
+		var t := 180.0 - ang
+		if t > 0.0 and t < 30.0:
+			tilt = t
+	print("[CAM CALIB] factory calibration: HFOV %.1f, VFOV %.1f, tilt %.1f deg, principal point (%.1f, %.1f) px  (configured: %.1f / %.1f / %.1f)" % [
+		hfov, vfov, tilt, float(k.cx), float(k.cy), camera_hfov_deg, camera_vfov_deg, camera_optical_tilt_deg])
+	if use_camera_intrinsics:
+		camera_hfov_deg = hfov
+		camera_vfov_deg = vfov
+		camera_optical_tilt_deg = tilt
+		_record_event("Camera calibration applied: FOV %.1f x %.1f, tilt %.1f" % [hfov, vfov, tilt])
+
 func _estimate_speed_v2(bridge, forward_dir_2d: Vector2) -> Dictionary:
 	if bridge == null or xr_camera == null:
 		return {"valid": false, "reason": "no bridge"}
@@ -2401,6 +2599,8 @@ func _estimate_speed_v2(bridge, forward_dir_2d: Vector2) -> Dictionary:
 	var count := int(raw[0])
 	if raw.size() < 1 + count * 4:
 		return {"valid": false, "reason": "malformed sample array"}
+	if not _cam_calib_applied:
+		_try_apply_camera_calibration()
 
 	var floor_y: float = tee_box_pos.y if enable_tee_box else 0.002
 	var ball_center_y := floor_y + 0.02135 # blob centroid ~ ball centre, not the contact point
@@ -2408,25 +2608,45 @@ func _estimate_speed_v2(bridge, forward_dir_2d: Vector2) -> Dictionary:
 
 	var times := PackedFloat64Array()
 	var pts := PackedVector2Array()
+	var pts_intr := PackedVector2Array()
 	var samples_log := []
 	for i in count:
 		var t_rel := float(raw[1 + i * 4])
 		var age := float(raw[2 + i * 4])
 		var norm := Vector2(float(raw[3 + i * 4]), float(raw[4 + i * 4]))
-		var head_xf := _head_pose_at(now_s - age)
-		var p := _norm_cam_to_floor(norm, head_xf, ball_center_y)
+		var head_xf := _head_pose_at(now_s - age - 0.025) # image vs head pose lag measured from a recording (see PuttTracker.PROJ_LAG_NS)
+		var p_fov := _norm_cam_to_floor(norm, head_xf, ball_center_y)
+		var p_int := _norm_cam_to_floor_intr(norm, head_xf, ball_center_y)
+		var p := p_int if (use_camera_intrinsics and not is_nan(p_int.x)) else p_fov
+		var b := head_xf.basis
+		var o := head_xf.origin
+		# [t_rel, age, norm_x, norm_y, floor_x, floor_z, head basis x(3) y(3) z(3), head origin(3)] -> offline re-analysis
 		samples_log.append([snappedf(t_rel, 0.0001), snappedf(age, 0.0001), snappedf(norm.x, 0.00001), snappedf(norm.y, 0.00001),
-			snappedf(p.x, 0.0001), snappedf(p.z, 0.0001)])
+			snappedf(p.x, 0.0001), snappedf(p.z, 0.0001),
+			snappedf(b.x.x, 0.00001), snappedf(b.x.y, 0.00001), snappedf(b.x.z, 0.00001),
+			snappedf(b.y.x, 0.00001), snappedf(b.y.y, 0.00001), snappedf(b.y.z, 0.00001),
+			snappedf(b.z.x, 0.00001), snappedf(b.z.y, 0.00001), snappedf(b.z.z, 0.00001),
+			snappedf(o.x, 0.0001), snappedf(o.y, 0.0001), snappedf(o.z, 0.0001)])
 		if is_nan(p.x):
 			continue
 		times.append(t_rel)
 		pts.append(Vector2(p.x, p.z))
+		if not is_nan(p_int.x):
+			pts_intr.append(Vector2(p_int.x, p_int.z))
 
 	var start_pos: Vector2 = _locked_ball_pos_2d if _locked_ball_pos_2d != Vector2.ZERO else Vector2(tee_box_pos.x, tee_box_pos.z)
 	var decel := 0.56 * 9.81 / maxf(physical_mat_stimp, 6.0)
 	var res := PuttSpeedEstimator.estimate(times, pts, start_pos, decel, SPEED_V2_SPAWN_DIST, forward_dir_2d)
 	res["samples"] = samples_log
 	res["start_pos"] = [start_pos.x, start_pos.y]
+	res["cam_calib"] = Array(_cam_calib)
+	# Always compute the alternative (intrinsics / FOV) estimate too, for comparison in the log
+	if not use_camera_intrinsics and pts_intr.size() == pts.size() and pts.size() >= 3:
+		var alt := PuttSpeedEstimator.estimate(times, pts_intr, start_pos, decel, SPEED_V2_SPAWN_DIST, forward_dir_2d)
+		res["alt_intrinsics_speed"] = alt.get("speed", 0.0)
+		res["alt_intrinsics_valid"] = alt.get("valid", false)
+		print("[SPEED v2] intrinsics model would give %.2f m/s (valid=%s, %s)" % [
+			float(alt.get("speed", 0.0)), str(alt.get("valid", false)), str(alt.get("reason", ""))])
 	return res
 
 func _log_speed_v2(v2: Dictionary, used: bool, raw_speed: float, raw_angle: float, old_speed: float, old_angle: float, fwd: Vector2) -> void:
@@ -2444,6 +2664,9 @@ func _log_speed_v2(v2: Dictionary, used: bool, raw_speed: float, raw_angle: floa
 		"head_pos": [xr_camera.global_position.x, xr_camera.global_position.y, xr_camera.global_position.z],
 		"cam": [camera_hfov_deg, camera_vfov_deg, camera_optical_tilt_deg, camera_x_offset_m, camera_y_offset_m, camera_z_offset_m],
 		"mat_stimp": physical_mat_stimp,
+		"cam_calib": v2.get("cam_calib", []),
+		"alt_intrinsics_speed": v2.get("alt_intrinsics_speed", 0.0),
+		"use_camera_intrinsics": use_camera_intrinsics,
 		"samples": v2.get("samples", []), # [t_rel, age, norm_x, norm_y, floor_x, floor_z]
 	}
 	var line := JSON.stringify(entry)
@@ -2457,6 +2680,150 @@ func _log_speed_v2(v2: Dictionary, used: bool, raw_speed: float, raw_angle: floa
 			f.store_line(line)
 			f.close()
 			return
+
+# =========================================================================
+# FLOOR BUTTON HELPERS + SESSION RECORDER (replay on Mac: tools/replay)
+# =========================================================================
+func _make_floor_button(node_name: String, pos: Vector3, bg: Color, text: String, text_col: Color) -> Array:
+	var root := Node3D.new()
+	root.name = node_name
+	root.position = pos
+	var box := BoxMesh.new()
+	box.size = Vector3(0.20, 0.038, 0.065)
+	var mesh := MeshInstance3D.new()
+	mesh.mesh = box
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = bg
+	mesh.material_override = mat
+	root.add_child(mesh)
+	var lbl := Label3D.new()
+	lbl.text = text
+	lbl.font_size = 18
+	lbl.pixel_size = 0.0009
+	lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	lbl.position = Vector3(0.0, 0.038, 0.0)
+	lbl.modulate = text_col
+	root.add_child(lbl)
+	if _tee_box_marker != null:
+		_tee_box_marker.add_child(root)
+	return [root, mat, lbl]
+
+func _set_extra_floor_btns_visible(v: bool) -> void:
+	if _tee_rec_btn != null:
+		_tee_rec_btn.visible = v or _rec_active
+	if _tee_green_btn != null:
+		_tee_green_btn.visible = v
+
+func _update_green_button_label() -> void:
+	if _tee_green_label == null:
+		return
+	var label := green_speed_mode.to_upper()
+	var st := physical_mat_stimp
+	var cm = _get_course_manager()
+	for p in CourseManager.GREEN_SPEED_PRESETS:
+		if p["id"] == green_speed_mode:
+			label = str(p["label"])
+	if cm != null:
+		st = cm.get_active_stimp()
+	_tee_green_label.text = "%s  %.1f" % [label, st]
+
+func _auto_start_recording() -> void:
+	# Camera + bridge need a moment after startup; retry until the recorder is available
+	if _rec_active:
+		return
+	var bridge = _get_bridge_class()
+	if bridge == null or not _cam_calib_applied:
+		get_tree().create_timer(1.0).timeout.connect(_auto_start_recording)
+		return
+	toggle_session_recording()
+
+func _on_record_session_toggled(enabled: bool) -> void:
+	_record_session_requested = enabled
+	print("[XRController] RECORD SESSION %s (starts at stance selection)" % ("ON" if enabled else "OFF"))
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_WM_CLOSE_REQUEST:
+		_stop_recording_if_active("app paused/closed")
+
+func _stop_recording_if_active(reason: String) -> void:
+	if not _rec_active:
+		return
+	var bridge = _get_bridge_class()
+	if bridge != null:
+		bridge.stopSessionRecording()
+	_on_recording_stopped(reason)
+
+## Compact snapshot of hands + tee interaction for the recording (tee alignment analysis)
+func _hands_state_json() -> String:
+	var hands := {}
+	for side in ["r", "l"]:
+		var hv = right_hand_vis if side == "r" else left_hand_vis
+		if hv != null and hv.is_hand_tracked:
+			var m: Vector3 = hv.pinch_midpoint
+			var a: Vector3 = hv.pinch_aim_direction
+			hands[side] = [snappedf(hv.pinch_distance_m, 0.0001), snappedf(m.x, 0.001), snappedf(m.y, 0.001), snappedf(m.z, 0.001),
+				snappedf(a.x, 0.001), snappedf(a.y, 0.001), snappedf(a.z, 0.001)]
+	return JSON.stringify({"type": "hands", "hands": hands, "hover": _last_hover_target, "drag": int(_tee_drag_state),
+		"flow": int(current_flow_state), "tee_confirmed": is_tee_confirmed,
+		"tee": [snappedf(tee_box_pos.x, 0.001), snappedf(tee_box_pos.y, 0.001), snappedf(tee_box_pos.z, 0.001), snappedf(tee_box_rotation_deg, 0.1)],
+		"aim": [snappedf(_smoothed_floor_aim.x, 0.001), snappedf(_smoothed_floor_aim.z, 0.001), _floor_aim_valid]})
+
+func toggle_session_recording() -> void:
+	var bridge = _get_bridge_class()
+	if bridge == null:
+		_record_event("REC not available (no camera bridge)")
+		return
+	var hand_ctrl = right_controller if golfer_handedness == "right" else left_controller
+	if _rec_active:
+		_rec_manual_stop = true
+		bridge.stopSessionRecording()
+		_on_recording_stopped("stopped by player")
+		_pulse_haptic(hand_ctrl, golfer_handedness, 0.6, 0.12, "REC stop")
+		return
+	var path: String = str(bridge.startSessionRecording(300))
+	if path == "":
+		_record_event("REC failed to start")
+		return
+	_rec_active = true
+	_rec_manual_stop = false
+	_rec_dir = path
+	_rec_started_s = Time.get_ticks_msec() / 1000.0
+	_write_recording_meta(path)
+	if _tee_rec_mat != null:
+		_tee_rec_mat.albedo_color = Color(0.95, 0.1, 0.1, 0.95)
+	_pulse_haptic(hand_ctrl, golfer_handedness, 0.8, 0.08, "REC start")
+	_record_event("RECORDING started: %s" % path)
+
+func _on_recording_stopped(reason: String) -> void:
+	print("[XRController] RECORDING STOPPED (%s) after %.1fs: %s" % [reason, Time.get_ticks_msec() / 1000.0 - _rec_started_s, _rec_dir])
+	_record_event("RECORDING stopped (%s): %s" % [reason, _rec_dir])
+	_rec_active = false
+	if _tee_rec_mat != null:
+		_tee_rec_mat.albedo_color = Color(0.45, 0.08, 0.08, 0.85)
+	if _tee_rec_label != null:
+		_tee_rec_label.text = "● REC"
+	_set_extra_floor_btns_visible(is_tee_confirmed)
+
+func _write_recording_meta(dir_path: String) -> void:
+	var meta := {
+		"created": Time.get_datetime_string_from_system(),
+		"tee_box_pos": [tee_box_pos.x, tee_box_pos.y, tee_box_pos.z],
+		"tee_box_rotation_deg": tee_box_rotation_deg,
+		"enable_tee_box": enable_tee_box,
+		"camera": {"hfov_deg": camera_hfov_deg, "vfov_deg": camera_vfov_deg, "tilt_deg": camera_optical_tilt_deg,
+			"offset_m": [camera_x_offset_m, camera_y_offset_m, camera_z_offset_m]},
+		"cam_calib": Array(_cam_calib),
+		"physical_mat_stimp": physical_mat_stimp,
+		"green_speed_mode": green_speed_mode,
+		"use_speed_v2": use_speed_v2,
+		"handedness": golfer_handedness,
+		"head_pose_note": "events.jsonl type=head: Godot world position + rotation quaternion of the XR camera",
+	}
+	var f := FileAccess.open(dir_path.path_join("meta.json"), FileAccess.WRITE)
+	if f != null:
+		f.store_string(JSON.stringify(meta, "  "))
+		f.close()
 
 func _arm_high_speed_corridor() -> void:
 	var bridge = _get_bridge_class()
@@ -2493,8 +2860,8 @@ func _arm_high_speed_corridor() -> void:
 
 	# Forward corridor: starts at the ball address spot and ends at +45cm
 	var p_start := ball_anchor
-	var p_exit := ball_anchor + fwd_3d * 0.45
-	var w_half := 0.18 # ±18cm lateral width
+	var p_exit := ball_anchor + fwd_3d * 0.75 # corridor length (tracker follows the ball to ~65 cm)
+	var w_half := 0.24 # lateral half-width (a few degrees off line = several cm after 65 cm)
 
 	var c0 := p_start - lat_3d * w_half
 	var c1 := p_start + lat_3d * w_half
@@ -2523,7 +2890,7 @@ func _arm_high_speed_corridor() -> void:
 	if screen_len < 0.04:
 		return
 	var fwd_norm := delta_screen.normalized()
-	var physical_corridor_len := 0.45
+	var physical_corridor_len := 0.75
 	var meters_per_norm_unit := physical_corridor_len / screen_len
 
 	bridge.armHighSpeedCorridor(min_x, min_y, max_x, max_y, s_start.x, s_start.y, fwd_norm.x, fwd_norm.y, meters_per_norm_unit, screen_len)
@@ -2836,6 +3203,10 @@ func _append_to_putt_log(msg: String) -> void:
 		file.close()
 
 func _record_event(evt_text: String) -> void:
+	if _rec_active:
+		var rb = _get_bridge_class()
+		if rb != null:
+			rb.recordEvent(JSON.stringify({"type": "game", "text": evt_text, "state": _ball_tracking_state_to_str()}))
 	_last_event_str = evt_text
 	_last_event_time = _total_running_time
 	print("[XRController] EVENT: %s (t=%.2fs)" % [evt_text, _total_running_time])
@@ -2958,16 +3329,33 @@ func _on_controller_button_pressed(button_name: String, hand: String) -> void:
 	
 	# If in calibration setup, A/X button confirms tee placement immediately
 	if current_flow_state == GameFlowState.TEE_CALIBRATION or not is_tee_confirmed:
+		if button_name == "trigger_click" and _grab_cooldown > 0.0 and _last_hover_target.ends_with("_BTN"):
+			return # duplicate of a hand pinch that already pressed the button
 		if button_name == "ax_button" or (button_name == "trigger_click" and _last_hover_target == "CONFIRM_BTN"):
+			_grab_cooldown = 0.6
 			confirm_tee_placement()
 			return
 	else:
 		# If playing putting game:
+		if button_name == "trigger_click" and _grab_cooldown > 0.0 and _last_hover_target.ends_with("_BTN"):
+			# Hand tracking reports a pinch BOTH as a pinch (handled in the floor-aim code) and as trigger_click.
+			# The pinch path already pressed the button and set the cooldown -> ignore the duplicate.
+			return
 		if (button_name == "by_button" and hand == "left") or (button_name == "trigger_click" and _last_hover_target == "REALIGN_BTN"):
+			_grab_cooldown = 0.6
 			realign_tee()
 			return
 		elif button_name == "trigger_click" and _last_hover_target == "SIM_BTN":
+			_grab_cooldown = 0.6
 			simulate_putt()
+			return
+		elif button_name == "trigger_click" and _last_hover_target == "REC_BTN":
+			_grab_cooldown = 0.8
+			toggle_session_recording()
+			return
+		elif button_name == "trigger_click" and _last_hover_target == "GREEN_BTN":
+			_grab_cooldown = 0.6
+			cycle_green_speed()
 			return
 
 	match button_name:
@@ -2978,9 +3366,9 @@ func _on_controller_button_pressed(button_name: String, hand: String) -> void:
 			else:
 				cycle_split_mode()
 		"primary_click":
-			# Thumbstick click: reset ball during gameplay or summon tee during calibration
+			# Thumbstick click: cycle green speed during gameplay (B still resets the ball), summon tee during calibration
 			if current_flow_state == GameFlowState.PUTTING_GAMEPLAY:
-				reset_putting_ball()
+				cycle_green_speed()
 			else:
 				summon_tee_to_player()
 		"ax_button":
@@ -3056,7 +3444,7 @@ func confirm_tee_placement() -> void:
 	if _tee_ball_spot_root != null: _tee_ball_spot_root.visible = true
 	if _tee_confirm_btn != null: _tee_confirm_btn.visible = false
 	if _tee_realign_btn != null: _tee_realign_btn.visible = true
-	if _tee_sim_btn != null: _tee_sim_btn.visible = true
+	if _tee_sim_btn != null: _tee_sim_btn.visible = true; _set_extra_floor_btns_visible(true)
 	_hide_laser_guide()
 	
 	# Hide virtual hands completely during putting gameplay!
@@ -3107,7 +3495,7 @@ func _start_tee_calibration() -> void:
 	if _tee_realign_btn != null:
 		_tee_realign_btn.visible = false
 	if _tee_sim_btn != null:
-		_tee_sim_btn.visible = false
+		_tee_sim_btn.visible = false; _set_extra_floor_btns_visible(false)
 		
 	var dom_c = right_controller if golfer_handedness == "right" else left_controller
 	var dom_h = "right" if golfer_handedness == "right" else "left"
@@ -3135,7 +3523,7 @@ func _apply_initial_tee_state() -> void:
 		if _tee_ball_spot_root != null: _tee_ball_spot_root.visible = true
 		if _tee_confirm_btn != null: _tee_confirm_btn.visible = true
 		if _tee_realign_btn != null: _tee_realign_btn.visible = false
-		if _tee_sim_btn != null: _tee_sim_btn.visible = false
+		if _tee_sim_btn != null: _tee_sim_btn.visible = false; _set_extra_floor_btns_visible(false)
 		print("[XRController] Initial State: CALIBRATION MODE (Course hidden, outlined hands active).")
 	else:
 		if test_green_controller != null and test_green_controller.has_method("set_course_visible"):
@@ -3147,7 +3535,7 @@ func _apply_initial_tee_state() -> void:
 		if _tee_ball_spot_root != null: _tee_ball_spot_root.visible = true
 		if _tee_confirm_btn != null: _tee_confirm_btn.visible = false
 		if _tee_realign_btn != null: _tee_realign_btn.visible = true
-		if _tee_sim_btn != null: _tee_sim_btn.visible = true
+		if _tee_sim_btn != null: _tee_sim_btn.visible = true; _set_extra_floor_btns_visible(true)
 		_hide_laser_guide()
 		print("[XRController] Initial State: PUTTING GAMEPLAY (Course visible, hands hidden, ball tracking circle active).")
 
@@ -3161,6 +3549,7 @@ func _save_tee_box_settings() -> void:
 	cfg.set_value("player", "handedness", golfer_handedness)
 	cfg.set_value("player", "completed_welcome", has_completed_welcome)
 	cfg.set_value("split", "offset_z", world_split_offset_z)
+	cfg.set_value("player", "green_speed", green_speed_mode)
 	cfg.save("user://tee_box_settings.cfg")
 	print("[XRController] TEE BOX & PROFILE SAVED: pos=%s, rot=%.1f deg, confirmed=%s, stance=%s, welcome_done=%s, split_offset_z=%.2f" % [tee_box_pos, tee_box_rotation_deg, is_tee_confirmed, golfer_handedness, has_completed_welcome, world_split_offset_z])
 
@@ -3184,6 +3573,7 @@ func _load_tee_box_settings() -> void:
 		golfer_handedness = cfg.get_value("player", "handedness", "right")
 		has_completed_welcome = cfg.get_value("player", "completed_welcome", false)
 		world_split_offset_z = cfg.get_value("split", "offset_z", 0.45)
+		green_speed_mode = cfg.get_value("player", "green_speed", "mat")
 		invert_split = false
 		print("[XRController] TEE BOX & PROFILE LOADED: pos=%s, rot=%.1f deg, confirmed=%s, stance=%s, welcome_done=%s, split_offset_z=%.2f" % [tee_box_pos, tee_box_rotation_deg, is_tee_confirmed, golfer_handedness, has_completed_welcome, world_split_offset_z])
 	else:
@@ -3228,6 +3618,35 @@ func _show_main_menu() -> void:
 	_hide_laser_guide()
 	print("[XRController] Main Menu opened (Stage 1)")
 
+## Keeps the menu in front of the player: if it is more than ~28 deg off to the side (or too near/far),
+## it glides back in front of the head. It was placed only once at startup, often before head tracking had settled,
+## so it ended up somewhere in the room and had to be searched for.
+var _menu_follow_active := false
+func _menu_follow(delta: float) -> void:
+	if xr_camera == null or game_menu == null:
+		return
+	var cam: Transform3D = xr_camera.global_transform
+	var fwd: Vector3 = -cam.basis.z
+	fwd.y = 0.0
+	if fwd.length() < 0.1:
+		return
+	fwd = fwd.normalized()
+	var to_menu: Vector3 = game_menu.global_position - cam.origin
+	to_menu.y = 0.0
+	var dist := to_menu.length()
+	var ang := rad_to_deg(fwd.angle_to(to_menu.normalized())) if dist > 0.05 else 180.0
+	if ang > 28.0 or dist < 0.7 or dist > 1.8:
+		_menu_follow_active = true
+	if _menu_follow_active:
+		var target: Vector3 = cam.origin + fwd * 1.15
+		target.y = maxf(0.95, cam.origin.y - 0.08)
+		var p: Vector3 = game_menu.global_position.lerp(target, clampf(delta * 4.0, 0.0, 1.0))
+		game_menu.global_position = p
+		game_menu.look_at(cam.origin, Vector3.UP)
+		game_menu.rotate_object_local(Vector3.UP, PI)
+		if p.distance_to(target) < 0.03:
+			_menu_follow_active = false
+
 func _show_stance_selection_page() -> void:
 	current_flow_state = GameFlowState.HANDEDNESS_SELECT
 	if game_menu != null:
@@ -3253,12 +3672,15 @@ func _select_handedness(h: String) -> void:
 	var ctrl = right_controller if h == "right" else left_controller
 	_pulse_haptic(ctrl, h, 0.8, 0.1, "Selected " + h.capitalize() + "-Handed Stance")
 	_record_event("Stance selected: %s-Handed" % h.capitalize())
+	if _record_session_requested and not _rec_active:
+		toggle_session_recording()
 	_start_tee_calibration()
 
 func _process_welcome_screen(_delta: float) -> void:
 	if game_menu == null or not game_menu.visible:
 		_hide_laser_guide()
 		return
+	_menu_follow(_delta)
 	
 	var r_hand_active: bool = right_hand_vis != null and right_hand_vis.is_hand_tracked
 	var l_hand_active: bool = left_hand_vis != null and left_hand_vis.is_hand_tracked

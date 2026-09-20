@@ -8,6 +8,8 @@ extends Node3D
 signal play_pressed()
 signal handedness_selected(handedness: String)
 signal menu_closed()
+signal green_speed_selected(mode: String)
+signal record_session_toggled(enabled: bool)
 
 @onready var page_main: Node3D = $PageMain
 @onready var page_stance: Node3D = $PageStance
@@ -19,8 +21,102 @@ signal menu_closed()
 var hovered_target: String = "NONE"
 var is_menu_active: bool = true
 
+# Green speed selector (row of buttons on the stance page), built in code
+const SPEED_BTN_X := [-0.285, -0.095, 0.095, 0.285]
+const SPEED_BTN_Y := -0.235
+const SPEED_BTN_W := 0.17
+const SPEED_BTN_H := 0.05
+var _speed_modes: Array = []   # [{"id","label","stimp"}] from CourseManager presets
+var _speed_btns: Array = []    # [{"bg": MeshInstance3D, "label": Label3D}]
+var _selected_speed: String = "mat"
+
+# RECORD SESSION toggle (stance page, above the stance cards)
+const REC_BTN_Y := 0.068
+const REC_BTN_W := 0.34
+const REC_BTN_H := 0.05
+var _rec_btn_bg: MeshInstance3D = null
+var _rec_btn_label: Label3D = null
+var record_session_enabled := false
+var _rec_toggle_latched := false # one toggle per pinch/trigger press
+
 func _ready() -> void:
 	show_main_page()
+
+## Builds (once) the green speed buttons. presets: Array of {"id","label","stimp"}; stimp < 0 = mat.
+func setup_green_speed_selector(presets: Array, selected: String, mat_stimp: float) -> void:
+	if page_stance == null:
+		return
+	_speed_modes = presets
+	_selected_speed = selected
+	_ensure_record_toggle()
+	if _speed_btns.is_empty():
+		var title := Label3D.new()
+		title.text = "GREEN SPEED  (thumbstick click changes it during play)"
+		title.pixel_size = 0.001
+		title.font_size = 12
+		title.outline_size = 4
+		title.modulate = Color(0.6, 0.9, 0.8, 1)
+		title.position = Vector3(0.0, -0.2, 0.006)
+		page_stance.add_child(title)
+		for i in presets.size():
+			var root := Node3D.new()
+			root.position = Vector3(SPEED_BTN_X[i], SPEED_BTN_Y, 0.006)
+			page_stance.add_child(root)
+			var bg := MeshInstance3D.new()
+			var q := QuadMesh.new()
+			q.size = Vector2(SPEED_BTN_W, SPEED_BTN_H)
+			bg.mesh = q
+			var m := StandardMaterial3D.new()
+			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			m.cull_mode = BaseMaterial3D.CULL_DISABLED
+			bg.material_override = m
+			root.add_child(bg)
+			var lbl := Label3D.new()
+			lbl.pixel_size = 0.001
+			lbl.font_size = 13
+			lbl.outline_size = 4
+			lbl.position = Vector3(0, 0, 0.002)
+			root.add_child(lbl)
+			_speed_btns.append({"bg": bg, "label": lbl})
+	for i in mini(presets.size(), _speed_btns.size()):
+		var st: float = float(presets[i]["stimp"])
+		if st < 0.0:
+			st = mat_stimp
+		_speed_btns[i]["label"].text = "%s\nStimp %.1f" % [presets[i]["label"], st]
+	_update_visual_states()
+
+func _ensure_record_toggle() -> void:
+	if _rec_btn_bg != null or page_stance == null:
+		return
+	var root := Node3D.new()
+	root.position = Vector3(0.0, REC_BTN_Y, 0.006)
+	page_stance.add_child(root)
+	_rec_btn_bg = MeshInstance3D.new()
+	var q := QuadMesh.new()
+	q.size = Vector2(REC_BTN_W, REC_BTN_H)
+	_rec_btn_bg.mesh = q
+	var m := StandardMaterial3D.new()
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_rec_btn_bg.material_override = m
+	root.add_child(_rec_btn_bg)
+	_rec_btn_label = Label3D.new()
+	_rec_btn_label.pixel_size = 0.001
+	_rec_btn_label.font_size = 14
+	_rec_btn_label.outline_size = 4
+	_rec_btn_label.position = Vector3(0, 0, 0.002)
+	root.add_child(_rec_btn_label)
+	_update_visual_states()
+
+func set_record_session_enabled(on: bool) -> void:
+	record_session_enabled = on
+	_update_visual_states()
+
+func set_selected_green_speed(mode: String) -> void:
+	_selected_speed = mode
+	_update_visual_states()
 
 ## Displays Page 1: Main Menu
 func show_main_page() -> void:
@@ -100,6 +196,31 @@ func process_pointer_ray(ray_origin: Vector3, ray_dir: Vector3, is_trigger: bool
 				show_stance_page()
 				return res
 	elif page_stance != null and page_stance.visible:
+		# RECORD SESSION toggle
+		if _rec_btn_bg != null and absf(hit_local.x) <= REC_BTN_W * 0.5 and absf(hit_local.y - REC_BTN_Y) <= REC_BTN_H * 0.5:
+			cur_hover = "REC_TOGGLE"
+			if is_trigger and not _rec_toggle_latched:
+				_rec_toggle_latched = true
+				record_session_enabled = not record_session_enabled
+				record_session_toggled.emit(record_session_enabled)
+			elif not is_trigger:
+				_rec_toggle_latched = false
+			hovered_target = cur_hover
+			res["hovered"] = cur_hover
+			_update_visual_states()
+			return res
+		_rec_toggle_latched = false
+		# Green speed buttons row
+		for i in mini(_speed_modes.size(), _speed_btns.size()):
+			if absf(hit_local.x - SPEED_BTN_X[i]) <= SPEED_BTN_W * 0.5 and absf(hit_local.y - SPEED_BTN_Y) <= SPEED_BTN_H * 0.5:
+				cur_hover = "SPEED_" + str(_speed_modes[i]["id"])
+				if is_trigger and _selected_speed != str(_speed_modes[i]["id"]):
+					_selected_speed = str(_speed_modes[i]["id"])
+					green_speed_selected.emit(_selected_speed)
+				hovered_target = cur_hover
+				res["hovered"] = cur_hover
+				_update_visual_states()
+				return res
 		# Test Card Right: x in [0.03, 0.38], y in [-0.19, 0.01]
 		if hit_local.x >= 0.03 and hit_local.x <= 0.38 and hit_local.y >= -0.19 and hit_local.y <= 0.01:
 			cur_hover = "STANCE_RIGHT"
@@ -121,6 +242,27 @@ func process_pointer_ray(ray_origin: Vector3, ray_dir: Vector3, is_trigger: bool
 	return res
 
 func _update_visual_states() -> void:
+	if _rec_btn_bg != null:
+		var rm: StandardMaterial3D = _rec_btn_bg.material_override
+		if record_session_enabled:
+			rm.albedo_color = Color(0.85, 0.1, 0.1, 0.95)
+			_rec_btn_label.text = "● RECORD SESSION: ON"
+		elif hovered_target == "REC_TOGGLE":
+			rm.albedo_color = Color(0.45, 0.12, 0.12, 0.95)
+			_rec_btn_label.text = "● RECORD SESSION: OFF"
+		else:
+			rm.albedo_color = Color(0.25, 0.07, 0.07, 0.90)
+			_rec_btn_label.text = "● RECORD SESSION: OFF"
+	# Green speed buttons
+	for i in mini(_speed_modes.size(), _speed_btns.size()):
+		var sid := str(_speed_modes[i]["id"])
+		var m: StandardMaterial3D = _speed_btns[i]["bg"].material_override
+		if sid == _selected_speed:
+			m.albedo_color = Color(0.08, 0.82, 0.40, 0.95)
+		elif hovered_target == "SPEED_" + sid:
+			m.albedo_color = Color(0.1, 0.35, 0.28, 0.95)
+		else:
+			m.albedo_color = Color(0.05, 0.16, 0.12, 0.90)
 	# Update Play Button Highlight
 	if play_btn_bg != null and play_btn_bg.material_override is StandardMaterial3D:
 		var mat: StandardMaterial3D = play_btn_bg.material_override

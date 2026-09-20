@@ -56,6 +56,11 @@ static func estimate(times: PackedFloat64Array, pts: PackedVector2Array, start_p
 		dir = -dir
 	var lateral := Vector2(-dir.y, dir.x)
 
+	# The address position comes from a different detector (YOLO) and was seen 20-25 cm off the tracked samples.
+	# The tracker fires at ~1-2 cm of movement, so if start_pos is far off, place it just behind the first sample.
+	if start_pos.distance_to(pts[0]) > 0.06:
+		start_pos = pts[0] - dir * 0.015
+
 	# 2. Along-track distance from address, corrected for known deceleration
 	var s := PackedFloat64Array()
 	var lat_sq := 0.0
