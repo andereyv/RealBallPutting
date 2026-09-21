@@ -149,6 +149,29 @@ var _tee_hud_label: Label3D = null
 var _wrist_hud_label: Label3D = null
 var _headset_fps_chip: Label3D = null
 var _hud_update_timer: float = 0.0
+## --- Aim-ray hygiene (2026-09-20) ---------------------------------------------------------------
+## A hand ray that only grazes the floor threw the hit point metres away: 22% of the rays the old gate
+## accepted landed >3 m from the tee (median 12 deg below horizontal, median reach 4.9 m), and one bad
+## frame dragged the tee 42 cm. Tightening the gate keeps 100% of the near-tee rays in the recordings.
+const AIM_RAY_MIN_DOWN := -0.30 ## ray must point >= 17 deg below horizontal (was -0.04 = 2.3 deg)
+const AIM_RAY_MAX_REACH_M := 4.0 ## floor hit must be within 4 m of the hand (was 12 m)
+const AIM_JUMP_MAX_M := 0.35 ## one frame may not move the aim further than this...
+const AIM_JUMP_HOLD_S := 0.25 ## ...unless it keeps moving that fast for this long (real fast sweep)
+const HOVER_STABLE_S := 0.12 ## hover target must hold this long before a grab registers (was 0: flickered)
+## --- Aim from behind ----------------------------------------------------------------------------
+## Stand behind the ball looking down your line and pinch-hold: the putting direction is taken from the
+## head->tee vector. At ~1.5 m back the head pose is ~20x steadier than a hand ray on the 0.38 m handle.
+const AIM_BEHIND_MIN_M := 0.9 ## how far behind the tee you must stand
+const AIM_BEHIND_FACING := 0.80 ## dot(head forward, head->tee) must exceed this
+const AIM_BEHIND_HOLD_S := 0.6 ## pinch-and-hold time to commit (also averages out head sway)
+var _last_raw_floor: Vector3 = Vector3.ZERO
+var _aim_reject_t: float = 0.0
+var _hover_prev: String = "NONE"
+var _hover_stable_t: float = 0.0
+var _aim_behind_t: float = 0.0
+var _aim_behind_vec: Vector2 = Vector2.ZERO
+var _aim_behind_armed: bool = false
+var _aim_behind_active: bool = false ## the aim-from-behind prompt owns the beam + degree label this frame
 var _grab_cooldown: float = 0.0
 var _total_running_time: float = 0.0
 var _last_event_str: String = "IDLE (Ready)"
@@ -830,9 +853,9 @@ func _process(delta: float) -> void:
 			
 			var r_floor_pt = Vector3.ZERO
 			var r_floor_valid = false
-			if r_has_aim and r_aim_dir.y < -0.04:
+			if r_has_aim and r_aim_dir.y < AIM_RAY_MIN_DOWN:
 				var t = (0.002 - r_aim_origin.y) / r_aim_dir.y
-				if t > 0.05 and t < 12.0:
+				if t > 0.05 and t < AIM_RAY_MAX_REACH_M:
 					r_floor_pt = r_aim_origin + r_aim_dir * t
 					r_floor_pt.y = 0.002
 					r_floor_valid = true
@@ -852,9 +875,9 @@ func _process(delta: float) -> void:
 			
 			var l_floor_pt = Vector3.ZERO
 			var l_floor_valid = false
-			if l_has_aim and l_aim_dir.y < -0.04:
+			if l_has_aim and l_aim_dir.y < AIM_RAY_MIN_DOWN:
 				var t = (0.002 - l_aim_origin.y) / l_aim_dir.y
-				if t > 0.05 and t < 12.0:
+				if t > 0.05 and t < AIM_RAY_MAX_REACH_M:
 					l_floor_pt = l_aim_origin + l_aim_dir * t
 					l_floor_pt.y = 0.002
 					l_floor_valid = true
@@ -937,11 +960,21 @@ func _process(delta: float) -> void:
 					_floor_aim_valid = false
 			
 			if _floor_aim_valid:
-				if _smoothed_floor_aim == Vector3.ZERO:
-					_smoothed_floor_aim = active_raw_floor
+				# Reject ray blow-ups: hold the previous aim rather than teleporting the tee with it.
+				var jump: float = 0.0 if _last_raw_floor == Vector3.ZERO else active_raw_floor.distance_to(_last_raw_floor)
+				if jump > AIM_JUMP_MAX_M and _aim_reject_t < AIM_JUMP_HOLD_S:
+					_aim_reject_t += delta
 				else:
-					_smoothed_floor_aim = _smoothed_floor_aim.lerp(active_raw_floor, clamp(delta * 24.0, 0.0, 1.0))
-				_smoothed_floor_aim.y = 0.002
+					_aim_reject_t = 0.0
+					_last_raw_floor = active_raw_floor
+					if _smoothed_floor_aim == Vector3.ZERO:
+						_smoothed_floor_aim = active_raw_floor
+					else:
+						_smoothed_floor_aim = _smoothed_floor_aim.lerp(active_raw_floor, clamp(delta * 24.0, 0.0, 1.0))
+					_smoothed_floor_aim.y = 0.002
+			else:
+				_last_raw_floor = Vector3.ZERO
+				_aim_reject_t = 0.0
 			
 			var hover_target: String = "NONE"
 			
@@ -1041,10 +1074,18 @@ func _process(delta: float) -> void:
 				else:
 					hover_target = "NONE"
 				
+				# Hover hysteresis: HANDLE_R/MAT/NONE used to flicker frame to frame, so a grab landed on
+				# whatever happened to be under the ray. Require the target to hold still first.
+				if hover_target == _hover_prev:
+					_hover_stable_t += delta
+				else:
+					_hover_prev = hover_target
+					_hover_stable_t = 0.0
+				
 				# Grab Initiation on active controller:
 				if not active_is_hand or active_pinch > 0.055:
 					_pinch_released = true
-				if hover_target != "NONE" and _grab_cooldown <= 0.0:
+				if hover_target != "NONE" and _grab_cooldown <= 0.0 and _hover_stable_t >= HOVER_STABLE_S:
 					var grab_triggered = false
 					var grab_src = ""
 					if active_is_hand and active_pinch < 0.038 and _pinch_released:
@@ -1102,6 +1143,65 @@ func _process(delta: float) -> void:
 					_update_laser_guide(active_aim_origin, _smoothed_floor_aim, Color(0.3, 0.75, 1.0, 0.45), 0.045)
 				else:
 					_hide_laser_guide()
+				
+				# Aim from behind: hands down, standing back from the tee and looking at it -> pinch & hold.
+				# Runs after the laser visuals so it owns the beam while the gesture is available.
+				if not is_tee_confirmed and hover_target == "NONE" and xr_camera != null:
+					var head_p: Vector3 = xr_camera.global_position
+					var to_tee := Vector2(tee_box_pos.x - head_p.x, tee_box_pos.z - head_p.z)
+					var behind_d: float = to_tee.length()
+					var hf3: Vector3 = -xr_camera.global_transform.basis.z
+					var hf := Vector2(hf3.x, hf3.z)
+					var facing: float = 0.0
+					# looking almost straight down gives a meaningless yaw, so ignore those frames
+					if behind_d > 0.05 and hf.length() > 0.25:
+						facing = hf.normalized().dot(to_tee / behind_d)
+					if behind_d >= AIM_BEHIND_MIN_M and facing >= AIM_BEHIND_FACING:
+						_aim_behind_active = true
+						var dirv := to_tee / behind_d
+						var holding: bool = (active_is_hand and active_pinch < 0.038) or active_grip >= 0.28 or active_trig >= 0.35
+						if holding:
+							if _aim_behind_armed and _aim_behind_t >= 0.0:
+								_aim_behind_t += delta
+								_aim_behind_vec += dirv
+						else:
+							_aim_behind_armed = true # a hand closed on the putter must open once before this arms
+							_aim_behind_t = 0.0
+							_aim_behind_vec = Vector2.ZERO
+						var cand: float = rad_to_deg(atan2(-dirv.x, -dirv.y))
+						var beam_col := Color(0.35, 0.8, 1.0, 0.45)
+						var lbl: String = ("PINCH & HOLD TO AIM: %.1f\u00b0" % cand) if _aim_behind_armed else "OPEN YOUR HAND, THEN PINCH TO AIM"
+						if _aim_behind_t < 0.0:
+							beam_col = Color(0.2, 1.0, 0.5, 0.95)
+							lbl = "AIM SET: %.1f\u00b0" % tee_box_rotation_deg
+						elif _aim_behind_t > 0.0:
+							beam_col = Color(1.0, 0.85, 0.2, 0.95)
+							lbl = "HOLD... %.1f\u00b0" % cand
+						_update_laser_guide(head_p, tee_box_pos + Vector3(dirv.x, 0.0, dirv.y) * 0.9, beam_col, 0.05)
+						if _tee_degree_label != null:
+							_tee_degree_label.visible = true
+							_tee_degree_label.text = lbl
+						if _aim_behind_t >= AIM_BEHIND_HOLD_S:
+							var v := _aim_behind_vec.normalized() # circular mean over the hold: averages head sway
+							tee_box_rotation_deg = rad_to_deg(atan2(-v.x, -v.y))
+							_save_tee_box_settings()
+							_notify_course_alignment()
+							_record_event("AIM SET FROM BEHIND: %.2f deg, stood %.2f m back" % [tee_box_rotation_deg, behind_d])
+							_pulse_haptic(active_aim_ctrl, active_aim_hand, 0.8, 0.10, "Aim set from behind")
+							_aim_behind_t = -1.0 # latched: release the pinch to arm it again
+							_aim_behind_vec = Vector2.ZERO
+							_aim_behind_armed = false
+					else:
+						_aim_behind_active = false
+						_aim_behind_t = 0.0
+						_aim_behind_vec = Vector2.ZERO
+						_aim_behind_armed = false
+				else:
+					_aim_behind_active = false
+				if not _aim_behind_active and (_aim_behind_t != 0.0 or _aim_behind_armed):
+					_aim_behind_t = 0.0
+					_aim_behind_vec = Vector2.ZERO
+					_aim_behind_armed = false
 				
 				# Visual highlights on rotation handles and buttons
 				var is_hl = (hover_target == "HANDLE_L")
@@ -1175,7 +1275,7 @@ func _process(delta: float) -> void:
 					_save_tee_box_settings()
 					_notify_course_alignment()
 			else:
-				if _tee_degree_label != null and _tee_drag_state == TeeDragState.NONE:
+				if _tee_degree_label != null and _tee_drag_state == TeeDragState.NONE and not _aim_behind_active:
 					_tee_degree_label.visible = false
 			
 			# Update position and rotation in scene
@@ -1360,7 +1460,7 @@ func _process(delta: float) -> void:
 				if _tee_arc_mat != null: _tee_arc_mat.albedo_color.a = 0.60 * _tee_marker_alpha
 				if _tee_handle_mat != null: _tee_handle_mat.albedo_color.a = 0.95 * _tee_marker_alpha
 				if _tee_front_label != null: _tee_front_label.modulate.a = 0.85 * _tee_marker_alpha
-				if _tee_degree_label != null and _tee_drag_state == TeeDragState.NONE:
+				if _tee_degree_label != null and _tee_drag_state == TeeDragState.NONE and not _aim_behind_active:
 					_tee_degree_label.visible = false
 			
 			# Real-time In-VR Debug HUD (runs continuously during calibration & gameplay)
