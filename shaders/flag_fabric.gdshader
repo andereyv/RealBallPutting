@@ -5,7 +5,7 @@ render_mode blend_mix, depth_draw_opaque, cull_disabled, diffuse_burley, specula
 // Features: Multi-harmonic wind wave displacement, canvas pole header,
 // double-stitched hem, micro nylon weave, velvet rim sheen, and translucent backlighting.
 
-uniform vec4 flag_color : source_color = vec4(0.85, 0.06, 0.10, 1.0); // Rich PGA tournament crimson red
+uniform vec4 flag_color : source_color = vec4(0.85, 0.06, 0.10, 1.0); // Rich tournament crimson red
 uniform vec4 header_color : source_color = vec4(0.92, 0.91, 0.88, 1.0); // Reinforced canvas sleeve
 uniform float wind_speed : hint_range(1.0, 15.0) = 5.2;
 uniform float wind_strength : hint_range(0.01, 0.3) = 0.08;

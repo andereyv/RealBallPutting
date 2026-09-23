@@ -26,7 +26,7 @@ enum SplitOrientation {
 @export_group("Stereoscopic 3D Split Screen")
 @export var current_mode: SplitMode = SplitMode.SPLIT_SCREEN
 @export var split_orientation: SplitOrientation = SplitOrientation.ACROSS_TARGET_LINE
-@export var world_split_offset_z: float = 0.45 ## Distance (m) ahead of tee box where virtual green begins
+@export var world_split_offset_z: float = 0.30 ## Distance (m) ahead of tee box where virtual green begins (was 0.45 until 2026-09-23)
 @export var world_split_offset_x: float = 0.2 ## In meters between stance and ball
 @export var divider_width_m: float = 0.018 ## 1.8 cm glowing 3D laser boundary on the turf
 @export var invert_split: bool = false ## Invert split side if needed
@@ -114,6 +114,15 @@ var _tee_rec_btn: Node3D = null
 var _tee_rec_mat: StandardMaterial3D = null
 var _tee_rec_label: Label3D = null
 var _tee_green_btn: Node3D = null
+var _tee_pin_minus_btn: Node3D = null ## [ PIN - ] / [ PIN + ]: move the hole closer / further (second row behind the tee)
+var _tee_pin_plus_btn: Node3D = null
+var _tee_pin_minus_label: Label3D = null
+var _tee_pin_plus_label: Label3D = null
+var pin_distance_m: float = 2.4
+const PIN_STEP_M := 0.5
+const PIN_MIN_M := 1.0
+const PIN_BTN_MINUS_LOCAL := Vector3(-0.13, 0.05, 0.62)
+const PIN_BTN_PLUS_LOCAL := Vector3(0.13, 0.05, 0.62)
 var _tee_green_mat: StandardMaterial3D = null
 var _tee_green_label: Label3D = null
 var _rec_active := false
@@ -187,7 +196,7 @@ var _head_pos_history: Array[Dictionary] = [] # Rolling buffer of {"time": float
 const PuttSpeedEstimator = preload("res://scripts/physics/putt_speed_estimator.gd")
 var _cam_pose_history: Array[Dictionary] = [] # Speed v2: {"t": float (ticks sec), "xf": Transform3D} last ~1 s
 var _last_speed_v2: Dictionary = {}
-var green_speed_mode: String = "mat" ## Green speed preset: mat / slow / normal / fast (see CourseManager)
+var green_speed_mode: String = "green" ## Green speed preset: green (its own) / mat / slow / normal / fast (see CourseManager)
 var _cam_calib: PackedFloat32Array = PackedFloat32Array() # [valid, fx, fy, cx, cy, activeW, activeH, streamW, streamH, tx, ty, tz, qx, qy, qz, qw, tsSource]
 var _cam_calib_applied := false
 var _cam_calib_poll_timer := 0.0
@@ -276,6 +285,40 @@ var _stroke_measuring_timer: float = 0.0
 var _is_high_speed_telemetry_putt: bool = false
 var _tee_timeout_timer: float = 30.0
 var _tee_telemetry_label: Label3D = null
+# Ball-seen light + "putt not measured" notice (first step of the surface check, 2026-09-22)
+var _hs_anchored: bool = false
+var _hs_unseen_t: float = 0.0
+var _hs_seen_logged: int = -1 # 1 = last logged "seen", 0 = "not seen"
+var _hs_lost_count: int = -1
+var _hs_lost_check_t: float = 0.0
+var _hs_poll_t: float = 0.0
+var _notice_text: String = ""
+var _notice_color: Color = Color(1.0, 0.66, 0.26)
+var _notice_t: float = 0.0
+## Idle recording guard: a headset left on the desk recorded 4 x 5 min of nothing (2.9 GB, 2026-09-22).
+var _idle_ref_pos: Vector3 = Vector3.ZERO
+var _idle_ref_quat: Quaternion = Quaternion.IDENTITY
+var _idle_t: float = 0.0
+const REC_IDLE_STOP_S := 30.0 # stop recording after this long without head movement (and no ball on the tee)
+## Floor buttons fire once per trigger/grip press: holding the trigger on GREEN cycled the speed 13 times (2026-09-22).
+var _btn_rearm: bool = true
+## UI on the green (2026-09-23): debug read-outs only in developer view; controls live in a palm-up hand menu
+@export var developer_mode: bool = false ## show debug HUDs, FPS, hand skeletons, raw telemetry and the instant replay
+@export var use_hand_menu: bool = true ## palm-up menu instead of the floor buttons behind the tee
+var _hand_menu = null # scripts/ui/hand_menu.gd
+var _status_pill = null # scripts/ui/status_pill.gd
+var _menu_hint_shown := false
+var _practice = null # scripts/gameplay/practice_session.gd: result card, finish marker, session stats
+## Last split plane sent to the green shader. The virtual ball is only drawn where the green is drawn, so on the
+## passthrough side you see just the real ball (no second ball rolling next to it).
+var _split_on: bool = false
+var _split_pt: Vector3 = Vector3.ZERO
+var _split_n: Vector3 = Vector3(0, 0, 1)
+var _split_inv: bool = false
+const SPLIT_BLEND_M := 0.25 # soft edge between the real floor and the green (was 0.35)
+const VIRTUAL_BALL_SHOW_DEPTH := 0.12 # m into the virtual side (green is ~50% opaque there)
+var _head_fast_t: float = 0.0 # > 0 while the head turned fast in the last 0.5 s (tracker blips, not putts)
+const HEAD_FAST_RAD_S := 1.31 # 75 deg/s; real putts measured 30-50 deg/s, false blips 110-120 deg/s
 var _replay_card: Sprite3D = null
 var _replay_card_timer: float = 0.0
 
@@ -284,6 +327,17 @@ var _audio_player: AudioStreamPlayer = null
 var _lock_chime_sound: AudioStreamWAV = null
 
 func _ready() -> void:
+	_practice = preload("res://scripts/gameplay/practice_session.gd").new()
+	_practice.name = "PracticeSession"
+	add_child(_practice)
+	_practice.head_provider = func(): return xr_camera.global_position if xr_camera != null else global_position + Vector3(0, 1.6, 0)
+	_hand_menu = preload("res://scripts/ui/hand_menu.gd").new()
+	_hand_menu.name = "HandMenu"
+	_hand_menu.host = self
+	add_child(_hand_menu)
+	_status_pill = preload("res://scripts/ui/status_pill.gd").new()
+	_status_pill.name = "StatusPill"
+	add_child(_status_pill)
 	_ensure_hand_visualizers()
 	_init_xr_subsystem()
 	_load_tee_box_settings()
@@ -413,6 +467,12 @@ func _connect_ball_signals() -> void:
 			golf_ball.connect("ball_stopped", _on_virtual_ball_stopped)
 		if golf_ball.has_signal("ball_holed") and not golf_ball.is_connected("ball_holed", _on_virtual_ball_holed):
 			golf_ball.connect("ball_holed", _on_virtual_ball_holed)
+		if golf_ball.has_signal("ball_started_rolling") and not golf_ball.is_connected("ball_started_rolling", _on_virtual_ball_started):
+			golf_ball.connect("ball_started_rolling", _on_virtual_ball_started)
+
+func _on_virtual_ball_started() -> void:
+	if _practice != null:
+		_practice.on_putt_started()
 
 func _on_virtual_ball_stopped(final_pos: Vector3) -> void:
 	# End image recording now that the ball has come to a rest!
@@ -438,6 +498,8 @@ func _on_virtual_ball_stopped(final_pos: Vector3) -> void:
 		total_roll, roll_cm, roll_ft, _launch_speed, _launch_speed * 2.23694, _launch_angle_deg, dist_str
 	])
 	_record_event("STOPPED: roll=%.2fm (%.0fcm), to_cup=%s" % [total_roll, roll_cm, dist_str])
+	if _practice != null:
+		_record_event("RESULT: " + _practice.on_putt_finished(final_pos, false, tee_box_pos, cup_world, _launch_speed, _launch_angle_deg))
 	
 	if _tee_telemetry_label != null:
 		_tee_telemetry_label.text = "SPEED: %.2f m/s (%.1f mph)\nANGLE: %+.1f°\nTOTAL ROLL: %.2fm (%.0f cm)" % [
@@ -469,6 +531,8 @@ func _on_virtual_ball_holed() -> void:
 		total_roll, roll_cm, _launch_speed, _launch_speed * 2.23694, _launch_angle_deg
 	])
 	_record_event("BALL HOLED! Roll: %.2fm" % total_roll)
+	if _practice != null:
+		_record_event("RESULT: " + _practice.on_putt_finished(cup_world, true, tee_box_pos, cup_world, _launch_speed, _launch_angle_deg))
 	_play_lock_chime()
 	var lead_ctrl = right_controller if golfer_handedness == "right" else left_controller
 	_pulse_haptic(lead_ctrl, golfer_handedness, 1.0, 0.35, "BALL_HOLED")
@@ -555,7 +619,7 @@ func _connect_menu_signals() -> void:
 		if game_menu.has_signal("green_speed_selected") and not game_menu.is_connected("green_speed_selected", _on_green_speed_selected):
 			game_menu.connect("green_speed_selected", _on_green_speed_selected)
 		if game_menu.has_method("setup_green_speed_selector"):
-			game_menu.call("setup_green_speed_selector", CourseManager.GREEN_SPEED_PRESETS, green_speed_mode, physical_mat_stimp)
+			game_menu.call("setup_green_speed_selector", _resolved_speed_presets(), green_speed_mode, physical_mat_stimp)
 		print("[XRController] Connected to GameMenu signals.")
 
 # ------------------------------------------------------------------ Green speed presets
@@ -586,12 +650,28 @@ func _apply_green_speed(mode: String, announce: bool = true) -> void:
 			if p["id"] == mode:
 				label = str(p["label"])
 		_record_event("GREEN SPEED: %s (Stimp %.1f)" % [label, stimp])
+		_show_notice("Green speed\n%s" % _speed_label(), 1.5, Color(0.35, 0.72, 1.0))
 		if _tee_telemetry_label != null:
-			_tee_telemetry_label.text = "GREEN SPEED: %s\nStimp %.1f" % [label, stimp]
+			_tee_telemetry_label.text = "GREEN SPEED: %s\n%.1f" % [label, stimp]
 		_save_tee_box_settings()
 
 func _on_green_speed_selected(mode: String) -> void:
+	if _practice != null and mode != green_speed_mode:
+		_practice.reset_session() # stats from another green speed aren't comparable
 	_apply_green_speed(mode, true)
+
+## Presets with the actual Stimp filled in (Green's own depends on the loaded green, My mat on the calibration)
+func _resolved_speed_presets() -> Array:
+	var out := []
+	var cm = _get_course_manager()
+	for p in CourseManager.GREEN_SPEED_PRESETS:
+		var st := float(p["stimp"])
+		if cm != null:
+			st = cm.get_stimp_for_mode(str(p["id"]))
+		elif st < 0.0:
+			st = physical_mat_stimp
+		out.append({"id": p["id"], "label": p["label"], "stimp": st})
+	return out
 
 func cycle_green_speed() -> void:
 	var ids := []
@@ -703,6 +783,7 @@ func _init_xr_subsystem() -> void:
 		_connect_controller_signals()
 	else:
 		print("[XRController] OpenXR not active or running in desktop preview. Falling back to desktop camera.")
+		_record_event("XR: OpenXR NOT active (desktop camera fallback)")
 		is_xr_active = false
 		if desktop_camera != null:
 			desktop_camera.current = true
@@ -712,6 +793,11 @@ func _setup_split_screen() -> void:
 	_apply_initial_tee_state()
 
 func _process(delta: float) -> void:
+	_process_body(delta)
+	_update_ui_layer(delta)
+
+func _process_body(delta: float) -> void:
+	_update_virtual_ball_visibility()
 	# Track headset angular and linear velocity to reject stroke detections during head turns
 	# and compensate for head ego-motion (head sway) during the putting stroke
 	if xr_camera != null:
@@ -725,6 +811,9 @@ func _process(delta: float) -> void:
 				_head_linear_vel = (cur_pos - _prev_cam_pos) / delta
 		_prev_cam_basis = cur_basis
 		_prev_cam_pos = cur_pos
+		_head_fast_t = maxf(0.0, _head_fast_t - delta)
+		if _head_angular_speed > HEAD_FAST_RAD_S:
+			_head_fast_t = 0.5
 
 		# Maintain 0.6s of head position history for ego-motion compensation during stroke interval dt
 		var cur_head_pos_2d := Vector2(cur_pos.x, cur_pos.z)
@@ -737,6 +826,18 @@ func _process(delta: float) -> void:
 		_cam_pose_history.append({"t": now_s, "xf": xr_camera.global_transform})
 		while _cam_pose_history.size() > 2 and now_s - float(_cam_pose_history[0]["t"]) > 1.2:
 			_cam_pose_history.pop_front()
+
+		# Idle guard: head still (< 3 cm, < 5 deg) for REC_IDLE_STOP_S -> stop recording; moving again restarts it
+		var cur_q: Quaternion = cur_basis.get_rotation_quaternion()
+		if cur_pos.distance_to(_idle_ref_pos) > 0.03 or cur_q.angle_to(_idle_ref_quat) > deg_to_rad(5.0):
+			_idle_ref_pos = cur_pos
+			_idle_ref_quat = cur_q
+			_idle_t = 0.0
+		else:
+			_idle_t += delta
+		var ball_busy := ball_tracking_state == BallTrackingState.LOCKED_ON_TEE or ball_tracking_state == BallTrackingState.BALL_ROLLING
+		if _rec_active and _idle_t >= REC_IDLE_STOP_S and not ball_busy:
+			_stop_recording_if_active("headset idle %.0f s" % REC_IDLE_STOP_S)
 
 		# Session recorder: stream head pose (position + quaternion) and keep the REC label up to date
 		if _rec_active:
@@ -757,7 +858,7 @@ func _process(delta: float) -> void:
 						_tee_rec_label.text = "■ STOP  %d:%02d" % [secs / 60, secs % 60]
 
 		# Auto-record: if a recording stopped for any reason (app pause, headset off, focus loss), start a new one
-		if auto_record_sessions and not _rec_active and not _rec_manual_stop:
+		if auto_record_sessions and not _rec_active and not _rec_manual_stop and _idle_t < REC_IDLE_STOP_S:
 			_rec_autostart_timer -= delta
 			if _rec_autostart_timer <= 0.0:
 				_rec_autostart_timer = 5.0
@@ -1052,7 +1153,7 @@ func _process(delta: float) -> void:
 						if dist_to_tee < snap_radius:
 							hover_target = "MAT"
 							hover_spot = tee_box_pos
-				elif is_tee_confirmed and _floor_aim_valid:
+				elif is_tee_confirmed and _floor_aim_valid and not use_hand_menu:
 					var tee_inv = _tee_box_marker.global_transform.affine_inverse()
 					var loc = tee_inv * _smoothed_floor_aim
 					var realign_btn_local = Vector3(-0.13, 0.05, 0.38)
@@ -1069,6 +1170,12 @@ func _process(delta: float) -> void:
 					elif loc.distance_to(Vector3(-0.39, 0.05, 0.38)) < 0.13:
 						hover_target = "GREEN_BTN"
 						hover_spot = _tee_box_marker.global_transform * Vector3(-0.39, 0.05, 0.38)
+					elif loc.distance_to(PIN_BTN_MINUS_LOCAL) < 0.12:
+						hover_target = "PIN_MINUS_BTN"
+						hover_spot = _tee_box_marker.global_transform * PIN_BTN_MINUS_LOCAL
+					elif loc.distance_to(PIN_BTN_PLUS_LOCAL) < 0.12:
+						hover_target = "PIN_PLUS_BTN"
+						hover_spot = _tee_box_marker.global_transform * PIN_BTN_PLUS_LOCAL
 					else:
 						hover_target = "NONE"
 				else:
@@ -1085,6 +1192,8 @@ func _process(delta: float) -> void:
 				# Grab Initiation on active controller:
 				if not active_is_hand or active_pinch > 0.055:
 					_pinch_released = true
+				if not active_is_hand and active_trig < 0.2 and active_grip < 0.2:
+					_btn_rearm = true
 				if hover_target != "NONE" and _grab_cooldown <= 0.0 and _hover_stable_t >= HOVER_STABLE_S:
 					var grab_triggered = false
 					var grab_src = ""
@@ -1100,6 +1209,11 @@ func _process(delta: float) -> void:
 							grab_triggered = true
 							grab_src = active_aim_hand + "_trigger"
 					
+					if grab_triggered and hover_target.ends_with("_BTN"):
+						if not active_is_hand and not _btn_rearm:
+							grab_triggered = false # still holding the press that already fired
+						else:
+							_btn_rearm = false
 					if grab_triggered:
 						if hover_target == "CONFIRM_BTN":
 							confirm_tee_placement()
@@ -1116,6 +1230,9 @@ func _process(delta: float) -> void:
 						elif hover_target == "GREEN_BTN":
 							cycle_green_speed()
 							_grab_cooldown = 0.60
+						elif hover_target == "PIN_MINUS_BTN" or hover_target == "PIN_PLUS_BTN":
+							change_pin_distance(-PIN_STEP_M if hover_target == "PIN_MINUS_BTN" else PIN_STEP_M)
+							_grab_cooldown = 0.35
 						else:
 							_drag_source = grab_src
 							_grab_initial_offset = tee_box_pos - _smoothed_floor_aim
@@ -1213,6 +1330,10 @@ func _process(delta: float) -> void:
 					_tee_rec_btn.scale = Vector3(1.15, 1.15, 1.15) if hover_target == "REC_BTN" else Vector3.ONE
 				if _tee_green_btn != null:
 					_tee_green_btn.scale = Vector3(1.15, 1.15, 1.15) if hover_target == "GREEN_BTN" else Vector3.ONE
+				if _tee_pin_minus_btn != null:
+					_tee_pin_minus_btn.scale = Vector3(1.15, 1.15, 1.15) if hover_target == "PIN_MINUS_BTN" else Vector3.ONE
+				if _tee_pin_plus_btn != null:
+					_tee_pin_plus_btn.scale = Vector3(1.15, 1.15, 1.15) if hover_target == "PIN_PLUS_BTN" else Vector3.ONE
 				
 				if _tee_rot_handle_l != null:
 					_tee_rot_handle_l.scale = Vector3(1.35, 1.35, 1.35) if is_hl else Vector3(1.0, 1.0, 1.0)
@@ -1405,26 +1526,36 @@ func _process(delta: float) -> void:
 					if _tee_ball_spot_mat != null:
 						var pulse = (0.70 + 0.25 * sin(_total_running_time * 3.5)) * _tee_spot_opacity
 						_tee_ball_spot_mat.albedo_color = Color(0.2, 0.85, 1.0, pulse)
+				_update_tracker_feedback(delta)
 				# Update 3D floating telemetry label on tee marker
 				if _tee_telemetry_label != null:
 					_tee_telemetry_label.visible = true
-					match ball_tracking_state:
-						BallTrackingState.SEARCHING:
-							var last_str = ("\n[Last: " + _last_putt_result + "]") if _last_putt_result != "" else ""
-							_tee_telemetry_label.text = "PLACE BALL IN CIRCLE" + last_str
-							_tee_telemetry_label.modulate = Color(0.2, 0.9, 1.0, 0.95)
-						BallTrackingState.APPROACHING_TEE:
-							_tee_telemetry_label.text = "MOVE BALL TO SPOT..."
-							_tee_telemetry_label.modulate = Color(0.3, 0.9, 0.8, 0.95)
-						BallTrackingState.LOCKED_ON_TEE:
-							_tee_telemetry_label.text = "READY TO PUTT\n(Aim & Strike)"
-							_tee_telemetry_label.modulate = Color(0.1, 1.0, 0.45, 1.0)
-						BallTrackingState.STROKE_DETECTED:
-							_tee_telemetry_label.text = "MEASURING... (%.1f m/s)" % _launch_speed
-							_tee_telemetry_label.modulate = Color(1.0, 0.85, 0.2, 1.0)
-						BallTrackingState.BALL_ROLLING:
-							_tee_telemetry_label.text = "SPEED: %.2f m/s (%.1f mph)\nANGLE: %+.1f°" % [_launch_speed, _launch_speed * 2.23694, _launch_angle_deg]
-							_tee_telemetry_label.modulate = Color(0.1, 1.0, 0.5, 1.0)
+					if _notice_t > 0.0:
+						_tee_telemetry_label.text = _notice_text
+						_tee_telemetry_label.modulate = Color(1.0, 0.6, 0.2, 1.0)
+					else:
+						match ball_tracking_state:
+							BallTrackingState.SEARCHING:
+								var last_str = ("\n[Last: " + _last_putt_result + "]") if _last_putt_result != "" else ""
+								_tee_telemetry_label.text = "PLACE BALL IN CIRCLE" + last_str
+								_tee_telemetry_label.modulate = Color(0.2, 0.9, 1.0, 0.95)
+							BallTrackingState.APPROACHING_TEE:
+								_tee_telemetry_label.text = "MOVE BALL TO SPOT..."
+								_tee_telemetry_label.modulate = Color(0.3, 0.9, 0.8, 0.95)
+							BallTrackingState.LOCKED_ON_TEE:
+								if _hs_unseen_t >= 0.5:
+									# the putt tracker cannot see the ball on this surface/light: say so BEFORE the putt
+									_tee_telemetry_label.text = "BALL NOT SEEN\nMore light, less glare, or a mat"
+									_tee_telemetry_label.modulate = Color(1.0, 0.6, 0.2, 1.0)
+								else:
+									_tee_telemetry_label.text = "READY TO PUTT\n(Aim & Strike)"
+									_tee_telemetry_label.modulate = Color(0.1, 1.0, 0.45, 1.0)
+							BallTrackingState.STROKE_DETECTED:
+								_tee_telemetry_label.text = "MEASURING... (%.1f m/s)" % _launch_speed
+								_tee_telemetry_label.modulate = Color(1.0, 0.85, 0.2, 1.0)
+							BallTrackingState.BALL_ROLLING:
+								_tee_telemetry_label.text = "SPEED: %.2f m/s (%.1f mph)\nANGLE: %+.1f°" % [_launch_speed, _launch_speed * 2.23694, _launch_angle_deg]
+								_tee_telemetry_label.modulate = Color(0.1, 1.0, 0.5, 1.0)
 				
 				# Keep tee box marker visible so the ball tracking circle can render
 				_tee_box_marker.visible = true
@@ -1898,6 +2029,11 @@ func _ensure_tee_box_marker() -> void:
 		var green_parts := _make_floor_button("GreenSpeedButton", Vector3(-0.39, 0.05, 0.38), Color(0.08, 0.35, 0.15, 0.85), "GREEN", Color(0.6, 1.0, 0.7, 0.95))
 		_tee_green_btn = green_parts[0]; _tee_green_mat = green_parts[1]; _tee_green_label = green_parts[2]
 		_update_green_button_label()
+		var pm_parts := _make_floor_button("PinCloserButton", PIN_BTN_MINUS_LOCAL, Color(0.10, 0.22, 0.40, 0.85), "PIN -", Color(0.7, 0.85, 1.0, 0.95))
+		_tee_pin_minus_btn = pm_parts[0]; _tee_pin_minus_label = pm_parts[2]
+		var pp_parts := _make_floor_button("PinFurtherButton", PIN_BTN_PLUS_LOCAL, Color(0.10, 0.22, 0.40, 0.85), "PIN +", Color(0.7, 0.85, 1.0, 0.95))
+		_tee_pin_plus_btn = pp_parts[0]; _tee_pin_plus_label = pp_parts[2]
+		_update_pin_button_labels()
 		_set_extra_floor_btns_visible(is_tee_confirmed)
 		
 		# --- Dedicated Ball Tracking Circle Group (Visible during putting) ---
@@ -2084,7 +2220,11 @@ func _check_and_process_high_speed_putt(bridge, forward_dir_2d: Vector2) -> bool
 	if use_speed_v2 and not v2_used:
 		# Not enough clean samples = not a real putt (putter touch, blip, detection glitch).
 		# Previously this fell back to the 2-point gate and launched phantom 1.5-3 m/s putts.
-		_record_event("REJECTED putt: %s (gate said %.2f m/s)" % [str(v2.get("reason", "")), compensated_speed])
+		var why := str(v2.get("reason", ""))
+		_record_event("REJECTED putt: %s (gate said %.2f m/s)" % [why, compensated_speed])
+		# a nudge with the toe or putter while setting up is not a putt: no message for those
+		if not (why.begins_with("ball moved only") or why.begins_with("start line")):
+			_show_notice("Putt not measured\nPut the ball back and try again")
 		bridge.clearHighSpeedPutt()
 		return false
 
@@ -2564,6 +2704,8 @@ func _ensure_replay_card() -> void:
 		add_child(_replay_card)
 
 func _load_replay_card_texture() -> void:
+	if not developer_mode:
+		return # the instant-replay photo strip is a debugging aid
 	_ensure_replay_card()
 	var candidates: Array[String] = [
 		"/sdcard/Android/data/com.example.realballputting/files/corridor_composite.jpg",
@@ -2758,6 +2900,7 @@ func _log_speed_v2(v2: Dictionary, used: bool, raw_speed: float, raw_angle: floa
 		"v2_rms_mm": float(v2.get("rms_m", 0.0)) * 1000.0, "v2_lateral_rms_mm": float(v2.get("lateral_rms_m", 0.0)) * 1000.0,
 		"v2_n": v2.get("n", 0), "v2_used_n": v2.get("used", 0), "v2_span_s": v2.get("span_s", 0.0),
 		"v2_first_dist": v2.get("first_dist", 0.0), "v2_last_dist": v2.get("last_dist", 0.0),
+		"v2_decel": v2.get("decel_fit", 0.0), "v2_decel_fitted": v2.get("decel_free", false),
 		"gate_raw_speed": raw_speed, "gate_raw_angle": raw_angle,
 		"gate_comp_speed": old_speed, "gate_comp_angle": old_angle,
 		"forward": [fwd.x, fwd.y], "start_pos": v2.get("start_pos", []),
@@ -2814,6 +2957,125 @@ func _set_extra_floor_btns_visible(v: bool) -> void:
 		_tee_rec_btn.visible = v or _rec_active
 	if _tee_green_btn != null:
 		_tee_green_btn.visible = v
+	if _tee_pin_minus_btn != null:
+		_tee_pin_minus_btn.visible = v
+	if _tee_pin_plus_btn != null:
+		_tee_pin_plus_btn.visible = v
+
+# ------------------------------------------------------------------ UI layer (runs after the game logic every frame)
+func _update_ui_layer(delta: float) -> void:
+	var dev := developer_mode
+	if _tee_hud_label != null: _tee_hud_label.visible = dev
+	if _headset_fps_chip != null: _headset_fps_chip.visible = dev
+	if _wrist_hud_label != null: _wrist_hud_label.visible = dev
+	for hv in [left_hand_vis, right_hand_vis]:
+		if hv != null:
+			hv.show_skeleton = dev
+	var playing := current_flow_state == GameFlowState.PUTTING_GAMEPLAY and is_tee_confirmed
+	if playing and use_hand_menu and not _menu_hint_shown and _notice_t <= 0.0:
+		_menu_hint_shown = true
+		_show_notice("Menu: look at your %s palm" % ("left" if golfer_handedness == "right" else "right"), 5.0, Color(0.35, 0.72, 1.0))
+	if use_hand_menu:
+		for b in [_tee_realign_btn, _tee_sim_btn, _tee_rec_btn, _tee_green_btn, _tee_pin_minus_btn, _tee_pin_plus_btn]:
+			if b != null:
+				b.visible = false
+	if _replay_card != null and not dev:
+		_replay_card.visible = false
+	var head: Vector3 = xr_camera.global_position if xr_camera != null else global_position + Vector3(0, 1.6, 0)
+
+	# Status pill replaces the raw telemetry text while playing (setup screens keep their instructions)
+	if _tee_telemetry_label != null:
+		_tee_telemetry_label.visible = dev or not playing
+	if _status_pill != null:
+		if playing and ball_tracking_state != BallTrackingState.BALL_ROLLING:
+			var r := deg_to_rad(tee_box_rotation_deg)
+			var fwd := Vector3(-sin(r), 0.0, -cos(r))
+			_status_pill.place(tee_box_pos + fwd * 0.22 + Vector3(0, 0.28, 0), head)
+			if _notice_t > 0.0:
+				var parts := _notice_text.split("\n")
+				_status_pill.show_status(parts[0], parts[1] if parts.size() > 1 else "", _notice_color, _notice_t)
+			elif ball_tracking_state == BallTrackingState.LOCKED_ON_TEE:
+				if _hs_unseen_t >= 0.5:
+					_status_pill.show_status("Ball not seen", "More light, less glare, or a mat", Color(1.0, 0.66, 0.26))
+				else:
+					_status_pill.show_status("Ready", "", Color(0.36, 0.86, 0.47), 2.0)
+			else:
+				_status_pill.show_status("Place the ball", "on the spot", Color(0.35, 0.72, 1.0))
+		else:
+			_status_pill.hide_status()
+
+	if _hand_menu != null and use_hand_menu:
+		var menu_hand = left_hand_vis if golfer_handedness == "right" else right_hand_vis
+		var poke_hand = right_hand_vis if golfer_handedness == "right" else left_hand_vis
+		_hand_menu.menu_hand_is_left = golfer_handedness == "right"
+		_hand_menu.update(delta, menu_hand, poke_hand, head, playing and ball_tracking_state != BallTrackingState.BALL_ROLLING)
+
+func _speed_label() -> String:
+	var cm = _get_course_manager()
+	var st: float = cm.get_active_stimp() if cm != null else physical_mat_stimp
+	var names := {"green": "Green's own", "mat": "My mat", "slow": "Slow", "normal": "Normal", "fast": "Fast"}
+	return "%s · %.1f" % [names.get(green_speed_mode, green_speed_mode), st]
+
+## Rows of the palm-up hand menu (scripts/ui/hand_menu.gd)
+func menu_items() -> Array:
+	return [
+		{"id": "adjust_tee", "title": "Adjust tee", "value": ""},
+		{"id": "speed", "title": "Green speed", "value": _speed_label()},
+		{"id": "pin", "title": "Pin distance", "value": "%.1f m" % pin_distance_m, "stepper": true},
+		{"id": "simulate", "title": "Simulate putt", "value": ""},
+		{"id": "record", "title": "Recording", "value": "On" if _rec_active else "Off"},
+		{"id": "dev", "title": "Developer view", "value": "On" if developer_mode else "Off"},
+	]
+
+func menu_action(id: String) -> void:
+	_record_event("MENU: %s" % id)
+	_play_menu_click()
+	match id:
+		"adjust_tee":
+			realign_tee()
+		"speed":
+			cycle_green_speed()
+		"pin_minus":
+			change_pin_distance(-PIN_STEP_M)
+		"pin_plus":
+			change_pin_distance(PIN_STEP_M)
+		"simulate":
+			simulate_putt()
+		"record":
+			toggle_session_recording()
+		"dev":
+			developer_mode = not developer_mode
+			_save_tee_box_settings()
+
+func _play_menu_click() -> void:
+	if has_method("_play_lock_chime"):
+		_play_lock_chime()
+
+## PIN - / PIN +: move the hole closer / further along the aimed line. Only between putts.
+func change_pin_distance(step: float) -> void:
+	if ball_tracking_state == BallTrackingState.BALL_ROLLING:
+		return
+	var max_d := 5.5
+	if test_green_controller != null and test_green_controller.has_method("max_pin_distance"):
+		max_d = floorf(float(test_green_controller.call("max_pin_distance")) * 10.0) / 10.0
+	var d := clampf(snappedf(pin_distance_m + step, 0.1), PIN_MIN_M, max_d)
+	if is_equal_approx(d, pin_distance_m):
+		_show_notice("Pin %.1f m\n%s" % [pin_distance_m, "Closest pin" if step < 0.0 else "Furthest pin"], 1.5, Color(0.35, 0.72, 1.0))
+		return
+	pin_distance_m = d
+	_notify_course_alignment()
+	if _practice != null:
+		_practice.reset_session() # stats at another distance aren't comparable
+	_update_pin_button_labels()
+	_save_tee_box_settings()
+	_record_event("PIN DISTANCE: %.1f m" % pin_distance_m)
+	_show_notice("Pin %.1f m\n%.0f ft" % [pin_distance_m, pin_distance_m * 3.28084], 1.5, Color(0.35, 0.72, 1.0))
+
+func _update_pin_button_labels() -> void:
+	if _tee_pin_minus_label != null:
+		_tee_pin_minus_label.text = "PIN -  %.1f m" % pin_distance_m
+	if _tee_pin_plus_label != null:
+		_tee_pin_plus_label.text = "PIN +  %.1f m" % pin_distance_m
 
 func _update_green_button_label() -> void:
 	if _tee_green_label == null:
@@ -2864,8 +3126,13 @@ func _hands_state_json() -> String:
 			var a: Vector3 = hv.pinch_aim_direction
 			hands[side] = [snappedf(hv.pinch_distance_m, 0.0001), snappedf(m.x, 0.001), snappedf(m.y, 0.001), snappedf(m.z, 0.001),
 				snappedf(a.x, 0.001), snappedf(a.y, 0.001), snappedf(a.z, 0.001)]
+			if hv.has_method("palm_normal") and hv.joint_ok(0):
+				var pn: Vector3 = hv.palm_normal()
+				var pc: Vector3 = hv.joint(0)
+				# palm normal + palm centre (to check the palm-up menu gesture offline)
+				hands[side + "p"] = [snappedf(pn.x, 0.01), snappedf(pn.y, 0.01), snappedf(pn.z, 0.01), snappedf(pc.x, 0.001), snappedf(pc.y, 0.001), snappedf(pc.z, 0.001)]
 	return JSON.stringify({"type": "hands", "hands": hands, "hover": _last_hover_target, "drag": int(_tee_drag_state),
-		"flow": int(current_flow_state), "tee_confirmed": is_tee_confirmed,
+		"flow": int(current_flow_state), "tee_confirmed": is_tee_confirmed, "menu": _hand_menu != null and _hand_menu.is_open,
 		"tee": [snappedf(tee_box_pos.x, 0.001), snappedf(tee_box_pos.y, 0.001), snappedf(tee_box_pos.z, 0.001), snappedf(tee_box_rotation_deg, 0.1)],
 		"aim": [snappedf(_smoothed_floor_aim.x, 0.001), snappedf(_smoothed_floor_aim.z, 0.001), _floor_aim_valid]})
 
@@ -2894,6 +3161,7 @@ func toggle_session_recording() -> void:
 		_tee_rec_mat.albedo_color = Color(0.95, 0.1, 0.1, 0.95)
 	_pulse_haptic(hand_ctrl, golfer_handedness, 0.8, 0.08, "REC start")
 	_record_event("RECORDING started: %s" % path)
+	_record_event("XR status: openxr_active=%s, passthrough=%s" % [is_xr_active, is_passthrough_active])
 
 func _on_recording_stopped(reason: String) -> void:
 	print("[XRController] RECORDING STOPPED (%s) after %.1fs: %s" % [reason, Time.get_ticks_msec() / 1000.0 - _rec_started_s, _rec_dir])
@@ -2998,6 +3266,7 @@ func _arm_high_speed_corridor() -> void:
 
 func _on_session_begun() -> void:
 	print("[XRController] OpenXR session begun! Re-applying viewport and split screen configuration...")
+	_record_event("XR: session begun")
 	get_viewport().use_xr = true
 	if xr_camera != null:
 		xr_camera.current = true
@@ -3006,6 +3275,7 @@ func _on_session_begun() -> void:
 
 func _on_session_focussed() -> void:
 	print("[XRController] OpenXR session FOCUS gained! Activating viewport and split screen...")
+	_record_event("XR: session focused")
 	get_viewport().use_xr = true
 	if xr_camera != null:
 		xr_camera.current = true
@@ -3215,14 +3485,31 @@ func _register_material(mat: ShaderMaterial) -> void:
 		var mat_name := mat.resource_path if mat.resource_path != "" else ("ShaderMat_%d" % mat.get_instance_id())
 		print("[XRController] Registered split-screen material: ", mat_name)
 
+func _update_virtual_ball_visibility() -> void:
+	if golf_ball == null or not ("render_visible" in golf_ball):
+		return
+	var show := true
+	if _split_on:
+		var d := (golf_ball.global_position - _split_pt).dot(_split_n)
+		if _split_inv:
+			d = -d
+		show = d < -VIRTUAL_BALL_SHOW_DEPTH # same sign convention as putting_green.gdshader (d >= 0: passthrough)
+	golf_ball.set("render_visible", show)
+	if not show and golf_ball.visible:
+		golf_ball.visible = false
+
 func _update_material_uniforms(enabled: bool, plane_pt: Vector3, plane_norm: Vector3, div_width: float, invert: bool) -> void:
+	_split_on = enabled
+	_split_pt = plane_pt
+	_split_n = plane_norm
+	_split_inv = invert
 	for mat in _split_materials:
 		if mat != null:
 			mat.set_shader_parameter("enable_split_screen", enabled)
 			mat.set_shader_parameter("split_plane_point", plane_pt)
 			mat.set_shader_parameter("split_plane_normal", plane_norm)
 			mat.set_shader_parameter("split_divider_width", div_width)
-			mat.set_shader_parameter("split_blend_width", 0.35)
+			mat.set_shader_parameter("split_blend_width", SPLIT_BLEND_M)
 			mat.set_shader_parameter("show_split_laser", false)
 			mat.set_shader_parameter("invert_split", invert)
 
@@ -3301,6 +3588,53 @@ func _append_to_putt_log(msg: String) -> void:
 		file.store_line("%s | %s" % [Time.get_time_string_from_system(), msg])
 		file.flush()
 		file.close()
+
+## Ball-seen light and "putt not measured" notice, from the putt tracker's own state (polled 10x per second).
+## A stroke the tracker lost counts as "not measured" only if the ball is really gone afterwards; if the tracker
+## re-finds the resting ball within 1.2 s it was a false alarm (head swing, putter waggle) and nothing is shown.
+func _update_tracker_feedback(delta: float) -> void:
+	_notice_t = maxf(0.0, _notice_t - delta)
+	_hs_poll_t -= delta
+	if _hs_poll_t > 0.0:
+		return
+	_hs_poll_t = 0.1
+	var bridge = _get_bridge_class()
+	if bridge == null:
+		return
+	var st = bridge.getTrackerStatus()
+	if st == null or st.size() < 4:
+		return
+	var armed: bool = int(st[0]) == 1 # PuttTracker.HS_STATE_ARMED
+	_hs_anchored = armed and float(st[1]) > 0.5
+	# Only count "not seen" while the tee spot is actually in the camera's view: looking up at the flag during
+	# address is normal and must not say "ball not seen" (2026-09-23).
+	if armed and not _hs_anchored and is_tee_in_camera_view():
+		_hs_unseen_t += 0.1
+	else:
+		_hs_unseen_t = 0.0
+	if armed:
+		var seen_now: int = 1 if _hs_anchored else (0 if _hs_unseen_t >= 0.5 else _hs_seen_logged)
+		if seen_now != _hs_seen_logged:
+			_hs_seen_logged = seen_now
+			if seen_now == 1:
+				_record_event("TRACKER: ball seen (contrast %d)" % int(st[2]))
+			else:
+				_record_event("TRACKER: ball NOT seen")
+	var lost: int = int(st[3])
+	# Ignore a loss while the head is turning fast: the image smears and the tracker drops the ball without a putt.
+	if _hs_lost_count >= 0 and lost > _hs_lost_count and _head_fast_t <= 0.0:
+		_hs_lost_check_t = 1.2
+	_hs_lost_count = lost
+	if _hs_lost_check_t > 0.0:
+		_hs_lost_check_t -= 0.1
+		if _hs_lost_check_t <= 0.0 and not _hs_anchored:
+			_show_notice("Putt not measured\nPut the ball back and try again")
+			_record_event("PUTT NOT MEASURED (tracker lost the ball)")
+
+func _show_notice(text: String, seconds: float = 3.0, color: Color = Color(1.0, 0.66, 0.26)) -> void:
+	_notice_color = color
+	_notice_text = text
+	_notice_t = seconds
 
 func _record_event(evt_text: String) -> void:
 	if _rec_active:
@@ -3415,6 +3749,14 @@ func _update_debug_hud(delta: float, rt: float, rg: float, lt: float, lg: float,
 
 func _on_controller_button_pressed(button_name: String, hand: String) -> void:
 	print("[XRController] %s hand pressed button: %s (flow: %s)" % [hand, button_name, current_flow_state])
+	# Menu button (left controller, or Meta's menu gesture on the left hand): open / close the practice menu
+	if button_name == "menu_button" and use_hand_menu and _hand_menu != null \
+			and current_flow_state == GameFlowState.PUTTING_GAMEPLAY and is_tee_confirmed:
+		var hp: Vector3 = xr_camera.global_position if xr_camera != null else global_position + Vector3(0, 1.6, 0)
+		var hf: Vector3 = -xr_camera.global_transform.basis.z if xr_camera != null else Vector3(0, 0, -1)
+		_hand_menu.toggle_pinned(hp, hf)
+		_record_event("MENU: toggled with the menu button (%s)" % hand)
+		return
 	if current_flow_state == GameFlowState.MAIN_MENU:
 		if button_name == "ax_button" or button_name == "trigger_click":
 			_show_stance_selection_page()
@@ -3433,6 +3775,7 @@ func _on_controller_button_pressed(button_name: String, hand: String) -> void:
 			return # duplicate of a hand pinch that already pressed the button
 		if button_name == "ax_button" or (button_name == "trigger_click" and _last_hover_target == "CONFIRM_BTN"):
 			_grab_cooldown = 0.6
+			_btn_rearm = false
 			confirm_tee_placement()
 			return
 	else:
@@ -3443,19 +3786,28 @@ func _on_controller_button_pressed(button_name: String, hand: String) -> void:
 			return
 		if (button_name == "by_button" and hand == "left") or (button_name == "trigger_click" and _last_hover_target == "REALIGN_BTN"):
 			_grab_cooldown = 0.6
+			_btn_rearm = false
 			realign_tee()
 			return
 		elif button_name == "trigger_click" and _last_hover_target == "SIM_BTN":
 			_grab_cooldown = 0.6
+			_btn_rearm = false
 			simulate_putt()
 			return
 		elif button_name == "trigger_click" and _last_hover_target == "REC_BTN":
 			_grab_cooldown = 0.8
+			_btn_rearm = false
 			toggle_session_recording()
 			return
 		elif button_name == "trigger_click" and _last_hover_target == "GREEN_BTN":
 			_grab_cooldown = 0.6
+			_btn_rearm = false
 			cycle_green_speed()
+			return
+		elif button_name == "trigger_click" and (_last_hover_target == "PIN_MINUS_BTN" or _last_hover_target == "PIN_PLUS_BTN"):
+			_grab_cooldown = 0.35
+			_btn_rearm = false
+			change_pin_distance(-PIN_STEP_M if _last_hover_target == "PIN_MINUS_BTN" else PIN_STEP_M)
 			return
 
 	match button_name:
@@ -3553,6 +3905,7 @@ func confirm_tee_placement() -> void:
 	# Reveal virtual putting course aligned with physical tee mat
 	if test_green_controller != null:
 		if test_green_controller.has_method("align_to_tee_box"):
+			test_green_controller.set("pin_distance_m", pin_distance_m)
 			test_green_controller.align_to_tee_box(tee_box_pos, tee_box_rotation_deg)
 		if test_green_controller.has_method("set_course_visible"):
 			test_green_controller.set_course_visible(true)
@@ -3650,6 +4003,8 @@ func _save_tee_box_settings() -> void:
 	cfg.set_value("player", "completed_welcome", has_completed_welcome)
 	cfg.set_value("split", "offset_z", world_split_offset_z)
 	cfg.set_value("player", "green_speed", green_speed_mode)
+	cfg.set_value("player", "pin_distance", pin_distance_m)
+	cfg.set_value("player", "developer_mode", developer_mode)
 	cfg.save("user://tee_box_settings.cfg")
 	print("[XRController] TEE BOX & PROFILE SAVED: pos=%s, rot=%.1f deg, confirmed=%s, stance=%s, welcome_done=%s, split_offset_z=%.2f" % [tee_box_pos, tee_box_rotation_deg, is_tee_confirmed, golfer_handedness, has_completed_welcome, world_split_offset_z])
 
@@ -3660,20 +4015,23 @@ func _load_tee_box_settings() -> void:
 		var py = cfg.get_value("tee_box", "pos_y", 0.002)
 		var pz = cfg.get_value("tee_box", "pos_z", 1.2)
 		# Sanity check: keep tee box within reach if saved coordinates were wildly offset
-		if abs(px) > 2.0 or pz < 0.2 or pz > 3.2:
+		# (was |x| > 2 or z outside 0.2-3.2 m: a tee placed further away was silently reset to the default spot)
+		if abs(px) > 8.0 or abs(pz) > 8.0:
 			print("[XRController] Clamping out-of-bounds tee pos (%.2f, %.2f) to default (0.0, 1.3)" % [px, pz])
 			px = 0.0
 			pz = 1.3
 		tee_box_pos = Vector3(px, py, pz)
 		tee_box_rotation_deg = cfg.get_value("tee_box", "rotation_deg", 0.0)
-		tee_box_rotation_deg = fposmod(tee_box_rotation_deg + 180.0, 360.0) - 180.0
-		if absf(tee_box_rotation_deg) > 75.0:
-			tee_box_rotation_deg = 0.0
+		tee_box_rotation_deg = fposmod(tee_box_rotation_deg + 180.0, 360.0) - 180.0 # any direction is valid
 		is_tee_confirmed = cfg.get_value("tee_box", "confirmed", false)
 		golfer_handedness = cfg.get_value("player", "handedness", "right")
 		has_completed_welcome = cfg.get_value("player", "completed_welcome", false)
-		world_split_offset_z = cfg.get_value("split", "offset_z", 0.45)
-		green_speed_mode = cfg.get_value("player", "green_speed", "mat")
+		world_split_offset_z = cfg.get_value("split", "offset_z", 0.30)
+		if is_equal_approx(world_split_offset_z, 0.45):
+			world_split_offset_z = 0.30 # old default -> new default (green starts 30 cm past the ball)
+		green_speed_mode = cfg.get_value("player", "green_speed", "green")
+		pin_distance_m = clampf(float(cfg.get_value("player", "pin_distance", 2.4)), PIN_MIN_M, 8.0)
+		developer_mode = bool(cfg.get_value("player", "developer_mode", developer_mode))
 		invert_split = false
 		print("[XRController] TEE BOX & PROFILE LOADED: pos=%s, rot=%.1f deg, confirmed=%s, stance=%s, welcome_done=%s, split_offset_z=%.2f" % [tee_box_pos, tee_box_rotation_deg, is_tee_confirmed, golfer_handedness, has_completed_welcome, world_split_offset_z])
 	else:
@@ -3682,13 +4040,14 @@ func _load_tee_box_settings() -> void:
 		is_tee_confirmed = false
 		golfer_handedness = "right"
 		has_completed_welcome = false
-		world_split_offset_z = 0.45
+		world_split_offset_z = 0.30
 		invert_split = false
 	
 	call_deferred("_apply_initial_tee_state")
 
 func _notify_course_alignment() -> void:
 	if test_green_controller != null and test_green_controller.has_method("align_to_tee_box"):
+		test_green_controller.set("pin_distance_m", pin_distance_m)
 		test_green_controller.align_to_tee_box(tee_box_pos, tee_box_rotation_deg)
 	_apply_active_plane()
 

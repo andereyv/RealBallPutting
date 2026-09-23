@@ -81,12 +81,12 @@ static func create_breaking_slope() -> GreenProfile:
 	p.cup_position_xz = Vector2(0.35, -0.2)
 	return p
 
-## Factory: Augusta Lightning Fast (High stimp, undulating greens)
-static func create_augusta_fast() -> GreenProfile:
+## Factory: Lightning Tournament Green (high green speed, undulating)
+static func create_lightning_fast() -> GreenProfile:
 	var p := GreenProfile.new()
-	p.id = "augusta_fast"
-	p.display_name = "Augusta Championship Speed"
-	p.description = "Ultra-slick bentgrass greens running at 13.5 on the Stimp. Lightning-fast downhill rolls."
+	p.id = "lightning_fast"
+	p.display_name = "Lightning Tournament Green"
+	p.description = "Ultra-slick bentgrass greens running at green speed 13.5. Lightning-fast downhill rolls."
 	p.difficulty = "Tournament"
 	p.overall_grade_slope = 0.015
 	p.cross_break_strength = 0.08

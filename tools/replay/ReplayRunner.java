@@ -68,19 +68,33 @@ public class ReplayRunner {
         int evIdx = 0, frames = 0, putts = 0, lowResWhileActive = 0;
         Inflater inf = new Inflater();
         byte[] y = null;
+        int colorFrames = 0;
         try (DataInputStream in = new DataInputStream(new BufferedInputStream(new FileInputStream(new File(dir, "frames.bin")), 1 << 20))) {
             while (true) {
                 int magic;
                 try { magic = in.readInt(); } catch (EOFException eof) { break; }
-                if (magic != 0x46524D31) throw new IOException("bad frame magic at frame " + frames);
+                if (magic != 0x46524D31 && magic != 0x46524D32) throw new IOException("bad frame magic at frame " + frames);
+                boolean color = magic == 0x46524D32; // FRM2: Y (w*h) then U and V planes ((w/2)*(h/2) each)
                 long sensorTs = in.readLong(), arrival = in.readLong(), lat = in.readLong();
                 int w = in.readInt(), h = in.readInt(), len = in.readInt();
                 byte[] comp = new byte[len];
                 in.readFully(comp);
-                if (y == null || y.length != w * h) y = new byte[w * h];
+                int need = w * h + (color ? 2 * (w / 2) * (h / 2) : 0);
+                if (y == null || y.length != need) y = new byte[need];
                 inf.reset(); inf.setInput(comp);
                 int got = 0;
                 while (got < y.length && !inf.finished()) got += inf.inflate(y, got, y.length - got);
+                if (color) {
+                    // hand the colour planes to the tracker exactly like the live bridge does
+                    int cw = w / 2, cs = cw * (h / 2);
+                    tr.latestUBuffer = Arrays.copyOfRange(y, w * h, w * h + cs);
+                    tr.latestVBuffer = Arrays.copyOfRange(y, w * h + cs, w * h + 2 * cs);
+                    tr.uRowStride = cw; tr.vRowStride = cw; tr.uPixelStride = 1; tr.vPixelStride = 1;
+                    tr.hasColorPlanes = true;
+                    colorFrames++;
+                } else {
+                    tr.hasColorPlanes = false;
+                }
 
                 // Replay recorded Godot->tracker calls that happened before this frame was processed
                 while (evIdx < events.size() && events.get(evIdx).t <= arrival) {
@@ -131,8 +145,8 @@ public class ReplayRunner {
         }
         logOut.close(); putOut.close();
         if (lowResWhileActive > 0) System.out.println("WARNING: " + lowResWhileActive + " preview (low-res) frames while the tracker was active were skipped");
-        System.out.println(String.format(Locale.US, "Replayed %d frames, %d events -> %d putt(s) detected. Log: %s",
-            frames, events.size(), putts, new File(dir, "replay_tracker.log").getPath()));
+        System.out.println(String.format(Locale.US, "Replayed %d frames (%d with colour), %d events -> %d putt(s) detected. Log: %s",
+            frames, colorFrames, events.size(), putts, new File(dir, "replay_tracker.log").getPath()));
     }
 
     static List<Float> nums(String s) {

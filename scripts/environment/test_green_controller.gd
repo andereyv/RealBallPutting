@@ -18,6 +18,15 @@ const FreeLookCameraScript = preload("res://scripts/camera/free_look_camera.gd")
 @onready var match_manager: MatchManager = get_node_or_null("MatchManager")
 
 var is_grid_visible: bool = true
+## Distance from the tee to the hole (m). The whole green is placed so the cup lies this far down the aimed line
+## (the green keeps its shape around the cup; the tee just sits further up or down the slope).
+var pin_distance_m: float = 2.4
+
+## Longest pin that still keeps the tee on the green (green half-length minus fringe and a margin).
+func max_pin_distance() -> float:
+	if green_generator == null:
+		return 5.5
+	return maxf(1.0, float(green_generator.green_length) * 0.5 - float(green_generator.fringe_width) - 0.3)
 
 func _ready() -> void:
 	_force_clean_environment()
@@ -136,11 +145,12 @@ func align_to_tee_box(tee_pos: Vector3, rotation_deg: float) -> void:
 	
 	var course_basis := Basis(Vector3.UP, deg_to_rad(rotation_deg))
 	
-	# In local coordinates of green_generator: ball is at (0, 0, 2.4), cup is at (0, 0, 0)
-	# Align so local (0, 0, 2.4) lands precisely at tee_pos on the physical floor
+	# In local coordinates of green_generator: ball is at (0, 0, pin_distance_m), cup is at (0, 0, 0)
+	# Align so local (0, 0, pin_distance_m) lands precisely at tee_pos on the physical floor
+	var d := clampf(pin_distance_m, 1.0, max_pin_distance())
 	green_generator.global_transform.basis = course_basis
-	green_generator.global_position = tee_pos - course_basis * Vector3(0.0, 0.0, 2.4)
-	var turf_h_at_tee: float = green_generator.call("get_surface_height", 0.0, 2.4)
+	green_generator.global_position = tee_pos - course_basis * Vector3(0.0, 0.0, d)
+	var turf_h_at_tee: float = green_generator.call("get_surface_height", 0.0, d)
 	green_generator.global_position.y = tee_pos.y - turf_h_at_tee
 	
 	# The cup is at local (0, 0, 0) -> world position:

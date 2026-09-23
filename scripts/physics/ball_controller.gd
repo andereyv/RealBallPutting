@@ -23,7 +23,7 @@ const State = BallState
 @export var ball_mass: float = 0.0459 # 45.9 grams
 
 @export_group("Green Speed (Stimpmeter)")
-@export var stimp_rating: float = 14.5 # 14.5=Indoor Putting Mat (Fast Felt), 11=Championship, 12=Augusta
+@export var stimp_rating: float = 14.5 # 14.5=Indoor Putting Mat (Fast Felt), 11=Championship, 13+=tournament fast
 @export var ignore_slope_gravity: bool = false ## When true, simulates pure flat level rolling friction ignoring slopes
 
 @export_group("Cup Specifications")
@@ -62,7 +62,7 @@ func strike(launch_velocity: Vector2) -> void:
 		return
 	velocity = launch_velocity
 	state = State.ROLLING
-	visible = true # Virtual ball emerges on the green
+	visible = render_visible # drawn only on the virtual green side (xr_controller sets render_visible)
 	ball_started_rolling.emit()
 	print("[BallPhysics] >>> BALL STRUCK! launch_vel=(%.2f, %.2f), speed=%.2f m/s, start_pos=(%.3f, %.3f, %.3f) <<<" % [
 		launch_velocity.x, launch_velocity.y, launch_velocity.length(),
@@ -130,8 +130,10 @@ func _process_rolling(delta: float) -> void:
 		var local_pt := green_generator.to_local(Vector3(current_xz.x, 0.0, current_xz.y))
 		var local_norm: Vector3 = green_generator.call("get_surface_normal", local_pt.x, local_pt.z)
 		var world_norm: Vector3 = green_generator.global_transform.basis * local_norm
-		# Surface normal downhill acceleration direction in world XZ
-		slope_accel = Vector2(world_norm.x, world_norm.z) * g
+		# Surface normal downhill acceleration direction in world XZ. A ball ROLLING (not sliding) down a slope
+		# accelerates at 5/7 g sin(slope): part of gravity's work goes into spinning it faster. Without the 5/7 every
+		# putt broke 40 % too much (1 m putts breaking 30-40 cm, 2026-09-22).
+		slope_accel = Vector2(world_norm.x, world_norm.z) * g * (5.0 / 7.0)
 
 	# 3. Stimpmeter Rolling Friction (decelerates opposite to motion)
 	var mu_r := 0.56 / maxf(stimp_rating, 6.0)

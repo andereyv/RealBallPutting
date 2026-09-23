@@ -463,7 +463,9 @@ public class HeadsetCameraBridge {
                                     long nowNs = System.nanoTime();
                                     if (tracker.hsState != PuttTracker.HS_STATE_IDLE) recFullResUntilNs = nowNs + 1_000_000_000L;
                                     sessionRecorder.offerFrame(latestYBuffer, frameWidth, frameHeight, frameRowStride, framePixelStride,
-                                        img.getTimestamp(), nowNs < recFullResUntilNs);
+                                        img.getTimestamp(), nowNs < recFullResUntilNs,
+                                        hasColorPlanes ? latestUBuffer : null, hasColorPlanes ? latestVBuffer : null,
+                                        uRowStride, uPixelStride, vRowStride, vPixelStride);
                                 }
 
                                 // High-Speed Differential Putting Corridor Tracker (60-90 Hz, < 0.1 ms)
@@ -849,7 +851,12 @@ public class HeadsetCameraBridge {
             if (!queue.offer(line)) dropped++;
         }
 
-        void offerFrame(byte[] y, int w, int h, int rowStride, int pxStride, long sensorTs, boolean fullRes) {
+        /**
+         * Full-resolution frames also carry the colour planes (record type FRM2: zlib of Y w*h, then U and V, each
+         * (w/2)*(h/2), planar) so surfaces and coloured balls can be evaluated offline; preview frames stay Y-only (FRM1).
+         */
+        void offerFrame(byte[] y, int w, int h, int rowStride, int pxStride, long sensorTs, boolean fullRes,
+                        byte[] u, byte[] v, int uRow, int uPx, int vRow, int vPx) {
             if (!running || y == null) return;
             if (isExpired()) { running = false; queue.offer(STOP); return; }
             if (!fullRes) {
@@ -869,7 +876,17 @@ public class HeadsetCameraBridge {
                 if (!queue.offer(new Object[]{tm, small})) dropped++;
                 return;
             }
-            byte[] packed = new byte[w * h];
+            boolean color = u != null && v != null && uPx > 0 && vPx > 0 && uRow > 0 && vRow > 0;
+            int cw = w / 2, ch = h / 2;
+            byte[] packed = new byte[w * h + (color ? 2 * cw * ch : 0)];
+            if (color) {
+                int ub = w * h, vb = w * h + cw * ch;
+                for (int r = 0; r < ch; r++) for (int c = 0; c < cw; c++) {
+                    int ui = r * uRow + c * uPx, vi = r * vRow + c * vPx;
+                    if (ui < u.length) packed[ub + r * cw + c] = u[ui];
+                    if (vi < v.length) packed[vb + r * cw + c] = v[vi];
+                }
+            }
             if (pxStride == 1) {
                 for (int r = 0; r < h; r++) {
                     int off = r * rowStride;
@@ -882,7 +899,7 @@ public class HeadsetCameraBridge {
                     if (idx < y.length) packed[r * w + c] = y[idx];
                 }
             }
-            long[] tmeta = new long[]{sensorTs, System.nanoTime(), PuttTracker.estimateCaptureLatencyNs(sensorTs), w, h};
+            long[] tmeta = new long[]{sensorTs, System.nanoTime(), PuttTracker.estimateCaptureLatencyNs(sensorTs), w, h, color ? 1 : 0};
             if (!queue.offer(new Object[]{tmeta, packed})) dropped++;
         }
 
@@ -915,7 +932,7 @@ public class HeadsetCameraBridge {
                         deflater.finish();
                         if (compBuf.length < px.length + 1024) compBuf = new byte[px.length + 1024];
                         int len = deflater.deflate(compBuf);
-                        fout.writeInt(0x46524D31); // 'FRM1'
+                        fout.writeInt(m.length > 5 && m[5] == 1 ? 0x46524D32 : 0x46524D31); // 'FRM2' = Y+U+V, 'FRM1' = Y only
                         fout.writeLong(m[0]);
                         fout.writeLong(m[1]);
                         fout.writeLong(m[2]);
@@ -2329,6 +2346,12 @@ public class HeadsetCameraBridge {
 
     public static void clearHighSpeedPutt() {
         if (instance != null) instance.tracker.clearHighSpeedPuttInternal();
+    }
+
+    /** [state, anchored 0/1, ball contrast (grey levels), lost-putt count] - see PuttTracker.statusSnapshot. */
+    public static float[] getTrackerStatus() {
+        if (instance == null) return new float[]{0f, 0f, 0f, 0f};
+        return instance.tracker.statusSnapshot();
     }
 
     private void renderAndSaveHighSpeedDashboard(int w, int h, int rowStride, int pxStride,

@@ -6,7 +6,10 @@ Usage:
   python3 tools/replay/rec_info.py <rec_dir> [--png N]  # also export every N-th frame as PNG (needs numpy + Pillow)
 
 Recording layout (written by HeadsetCameraBridge.SessionRecorder):
-  frames.bin   : repeated [b'FRM1' | sensorTsNs i64 | arrivalNanoTime i64 | captureLatencyNs i64 | w i32 | h i32 | len i32 | zlib(Y w*h)]  (big-endian)
+  frames.bin   : repeated [magic | sensorTsNs i64 | arrivalNanoTime i64 | captureLatencyNs i64 | w i32 | h i32 | len i32 | zlib(payload)]
+                 (big-endian). b'FRM1': payload = Y (w*h). b'FRM2' (full-res frames since 2026-09-21): Y (w*h), then
+                 U and V planes, (w/2)*(h/2) each. iter_frames always returns "y" as exactly w*h bytes, plus "u"/"v"
+                 (None for FRM1).
   events.jsonl : {"t_ns": System.nanoTime, "type": head|arm|disarm|clear|game|start|stop, ...}
   meta.json    : tee pose, camera params, calibration (written by Godot)
 """
@@ -21,13 +24,21 @@ def iter_frames(path, decode=True):
             if len(h) < HDR.size:
                 return
             magic, ts, arrival, lat, w, hgt, ln = HDR.unpack(h)
-            if magic != b"FRM1":
+            if magic not in (b"FRM1", b"FRM2"):
                 raise ValueError("bad frame magic at offset %d" % (f.tell() - HDR.size))
             data = f.read(ln)
             if len(data) < ln:
                 return
-            yield {"ts": ts, "arrival": arrival, "latency": lat, "w": w, "h": hgt,
-                   "y": zlib.decompress(data) if decode else None}
+            y = u = v = None
+            if decode:
+                raw = zlib.decompress(data)
+                y = raw[:w * hgt]
+                if magic == b"FRM2":
+                    cs = (w // 2) * (hgt // 2)
+                    u = raw[w * hgt:w * hgt + cs]
+                    v = raw[w * hgt + cs:w * hgt + 2 * cs]
+            yield {"ts": ts, "arrival": arrival, "latency": lat, "w": w, "h": hgt, "y": y, "u": u, "v": v,
+                   "color": magic == b"FRM2"}
 
 def load_events(path):
     ev = []

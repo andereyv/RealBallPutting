@@ -153,7 +153,7 @@ func get_fringe_factor(x: float, z: float) -> float:
 	# Smooth transition through the collar band
 	return clampf((dist - 0.82) / 0.28, 0.0, 1.0)
 
-## Generates the high-resolution putting green mesh with recessed cup cutout
+## Generates the high-resolution putting green mesh (the cup itself is cut in the shader)
 func generate_green() -> void:
 	var surface_tool := SurfaceTool.new()
 	surface_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -178,16 +178,11 @@ func generate_green() -> void:
 			var normal := get_surface_normal(x, z)
 			var fringe := get_fringe_factor(x, z)
 			
-			# Recessed cup hole vertex adjustment
-			# If vertex is right inside the cup, recess it to create a physical hole floor
+			# The cup is cut per pixel in putting_green.gdshader (cup_* uniforms), not by dropping grid
+			# vertices: the grid is ~6.4 cm, wider than the cup's 5.4 cm radius, so recessing vertices made
+			# a 13 cm square pyramid pit whose contour lines showed up as concentric squares.
 			if dist_to_cup < cup_radius:
-				y -= cup_depth
-				normal = Vector3.UP
 				fringe = 0.0
-			elif dist_to_cup < cup_radius + 0.035:
-				# Smooth lip bevelling around the cup rim
-				var lip_t := (dist_to_cup - cup_radius) / 0.035
-				y -= cup_depth * (1.0 - smoothstep(0.0, 1.0, lip_t)) * 0.25
 			
 			var uv := Vector2((x + half_w) / green_width, (z + half_l) / green_length)
 			
@@ -227,8 +222,18 @@ func generate_green() -> void:
 		if mat != null:
 			material_override = mat
 
+	_apply_cup_to_material()
+	
 	# Update collision body if present or requested
 	_update_collision()
+
+## Tells the green shader where to cut the cup (mesh-local XZ, so it follows course re-alignment).
+func _apply_cup_to_material() -> void:
+	var sm := material_override as ShaderMaterial
+	if sm == null:
+		return
+	sm.set_shader_parameter("cup_center_local", cup_position_xz)
+	sm.set_shader_parameter("cup_radius", cup_radius)
 
 func _update_collision() -> void:
 	var static_body := get_node_or_null("StaticBody3D") as StaticBody3D

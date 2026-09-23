@@ -15,13 +15,15 @@ signal green_catalog_updated()
 @export var match_physical_mat: bool = true ## When true, matches physical synthetic putting mat felt (Stimp 14.5)
 
 ## Green speed presets (Stimp in feet). "mat" = same speed as the physical putting mat (1:1 with the real ball).
+## "green" = the selected green's own built-in speed (GreenProfile.stimp_speed); the default.
 const GREEN_SPEED_PRESETS := [
+	{"id": "green", "label": "GREEN'S OWN", "stimp": -2.0},
 	{"id": "mat", "label": "MY MAT", "stimp": -1.0},
 	{"id": "slow", "label": "SLOW", "stimp": 8.0},
 	{"id": "normal", "label": "NORMAL", "stimp": 10.0},
 	{"id": "fast", "label": "FAST", "stimp": 12.5},
 ]
-var green_speed_mode: String = "mat"
+var green_speed_mode: String = "green"
 var mat_stimp: float = 12.8 ## Measured Stimp of the physical mat (set from XRController.physical_mat_stimp)
 
 var _catalog: Array[GreenProfile] = []
@@ -39,7 +41,7 @@ func _init_catalog() -> void:
 	_catalog.append(GreenProfile.create_flat_practice())
 	_catalog.append(GreenProfile.create_championship_tiered())
 	_catalog.append(GreenProfile.create_breaking_slope())
-	_catalog.append(GreenProfile.create_augusta_fast())
+	_catalog.append(GreenProfile.create_lightning_fast())
 	green_catalog_updated.emit()
 	print("[CourseManager] Catalog initialized with %d green profiles." % _catalog.size())
 
@@ -47,7 +49,10 @@ func _init_catalog() -> void:
 func get_stimp_for_mode(mode: String) -> float:
 	for p in GREEN_SPEED_PRESETS:
 		if p["id"] == mode:
-			return mat_stimp if float(p["stimp"]) < 0.0 else float(p["stimp"])
+			var st := float(p["stimp"])
+			if st <= -2.0:
+				return _current_profile.stimp_speed if _current_profile != null else 11.0
+			return mat_stimp if st < 0.0 else st
 	return mat_stimp
 
 func get_active_stimp() -> float:
@@ -107,7 +112,7 @@ func load_green(profile: GreenProfile) -> bool:
 	
 	# 2. Update Ball Physics Stimp Rating
 	if golf_ball != null:
-		# Green speed comes from the selected preset (My mat / Slow / Normal / Fast), not from the profile
+		# Green speed comes from the selected preset (Green's own = this profile's speed, My mat / Slow / Normal / Fast)
 		golf_ball.stimp_rating = get_active_stimp()
 		print("[CourseManager] Turf Stimp %.1f (green speed '%s')" % [golf_ball.stimp_rating, green_speed_mode])
 		if green_generator != null:

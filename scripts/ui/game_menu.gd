@@ -22,9 +22,9 @@ var hovered_target: String = "NONE"
 var is_menu_active: bool = true
 
 # Green speed selector (row of buttons on the stance page), built in code
-const SPEED_BTN_X := [-0.285, -0.095, 0.095, 0.285]
+const SPEED_BTN_X := [-0.30, -0.15, 0.0, 0.15, 0.30]
 const SPEED_BTN_Y := -0.235
-const SPEED_BTN_W := 0.17
+const SPEED_BTN_W := 0.14
 const SPEED_BTN_H := 0.05
 var _speed_modes: Array = []   # [{"id","label","stimp"}] from CourseManager presets
 var _speed_btns: Array = []    # [{"bg": MeshInstance3D, "label": Label3D}]
@@ -42,7 +42,8 @@ var _rec_toggle_latched := false # one toggle per pinch/trigger press
 func _ready() -> void:
 	show_main_page()
 
-## Builds (once) the green speed buttons. presets: Array of {"id","label","stimp"}; stimp < 0 = mat.
+## Builds (once) the green speed buttons. presets: Array of {"id","label","stimp"} with the speed already resolved
+## (stimp < 0 = mat, kept for older callers).
 func setup_green_speed_selector(presets: Array, selected: String, mat_stimp: float) -> void:
 	if page_stance == null:
 		return
@@ -58,7 +59,7 @@ func setup_green_speed_selector(presets: Array, selected: String, mat_stimp: flo
 		title.modulate = Color(0.6, 0.9, 0.8, 1)
 		title.position = Vector3(0.0, -0.2, 0.006)
 		page_stance.add_child(title)
-		for i in presets.size():
+		for i in mini(presets.size(), SPEED_BTN_X.size()):
 			var root := Node3D.new()
 			root.position = Vector3(SPEED_BTN_X[i], SPEED_BTN_Y, 0.006)
 			page_stance.add_child(root)
@@ -83,7 +84,7 @@ func setup_green_speed_selector(presets: Array, selected: String, mat_stimp: flo
 		var st: float = float(presets[i]["stimp"])
 		if st < 0.0:
 			st = mat_stimp
-		_speed_btns[i]["label"].text = "%s\nStimp %.1f" % [presets[i]["label"], st]
+		_speed_btns[i]["label"].text = "%s\nspeed %.1f" % [presets[i]["label"], st]
 	_update_visual_states()
 
 func _ensure_record_toggle() -> void:

@@ -16,11 +16,21 @@ extends RefCounted
 const MIN_SAMPLES := 3
 const MAX_RMS_M := 0.010        # reject fits with >1 cm residual RMS
 const MIN_SPAN_S := 0.025       # need at least ~2 frame intervals
+const MIN_TRAVEL_M := 0.10      # a putt is tracked over >= 18 cm; 3 points over 4 cm was a toe nudging the ball (2026-09-22)
+const MAX_ANGLE_DEG := 25.0     # real putts start within a few degrees of the line; 46 deg was that same toe nudge
 const OUTLIER_FLOOR_M := 0.004  # never reject residuals under 4 mm
 const LATE_MIN_DIST := 0.12     # fit only samples beyond 12 cm (past the skid) when enough exist
 const LATE_MIN_SAMPLES := 4
 const MAX_DECEL := 6.0          # m/s^2 (only used if free-deceleration fitting is enabled)
 const USE_FREE_DECEL := false
+## The rolling deceleration is also fitted from the samples, pulled towards `decel` (the mat's) by a prior.
+## Short tracks (< ~0.2 s) stay at the mat value; long tracks on a faster surface (wood floor: ~0.1 m/s^2
+## vs 0.43 on the mat) follow the data. Without this, floor putts came out 5-12 % fast (2026-09-22).
+## Weight 3e-4: mat putts change by <= 0.02 m/s (one by 0.05), floor putts match frame-by-frame truth.
+const FIT_DECEL_WITH_PRIOR := true
+const DECEL_PRIOR_WEIGHT := 0.0003
+const DECEL_MIN := 0.05
+const DECEL_MAX := 1.2
 
 ## times:      sample times in seconds (relative, from camera sensor timestamps)
 ## pts:        floor positions (x, z) in metres
@@ -171,6 +181,10 @@ static func estimate(times: PackedFloat64Array, pts: PackedVector2Array, start_p
 
 	if res.span_s < MIN_SPAN_S:
 		res.reason = "time span too short (%.3fs)" % res.span_s
+	elif res.last_dist - res.first_dist < MIN_TRAVEL_M:
+		res.reason = "ball moved only %.0f cm" % ((res.last_dist - res.first_dist) * 100.0)
+	elif absf(res.angle_deg) > MAX_ANGLE_DEG:
+		res.reason = "start line %.0f deg off (not a putt)" % res.angle_deg
 	elif rms > MAX_RMS_M:
 		res.reason = "fit residual too high (%.1f mm)" % (rms * 1000.0)
 	elif v_ref < 0.2 or v_ref > 6.0:
@@ -187,6 +201,29 @@ static func _eval(fit: Dictionary, t: float) -> float:
 ## Least squares for s = a + b*t - 0.5*acc*t^2. If free, acc is fitted (clamped to [0, MAX_DECEL]);
 ## otherwise acc = fixed_decel and only a, b are fitted.
 static func _fit(t: PackedFloat64Array, s: PackedFloat64Array, mask: Array, fixed_decel: float, free: bool) -> Dictionary:
+	if not free and FIT_DECEL_WITH_PRIOR:
+		var pm := [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+		var pr := [0.0, 0.0, 0.0]
+		var pc := 0
+		for i in t.size():
+			if not mask[i]:
+				continue
+			pc += 1
+			var pb := [1.0, t[i], -0.5 * t[i] * t[i]]
+			for j in 3:
+				pr[j] += pb[j] * s[i]
+				for k in 3:
+					pm[j][k] += pb[j] * pb[k]
+		if pc >= 3:
+			# prior row: sqrt(w) * acc = sqrt(w) * fixed_decel
+			pm[2][2] += DECEL_PRIOR_WEIGHT
+			pr[2] += DECEL_PRIOR_WEIGHT * fixed_decel
+			var psol := _solve3(pm, pr)
+			if psol.size() == 3:
+				var acc_p := clampf(float(psol[2]), DECEL_MIN, DECEL_MAX)
+				var lfp := _line_fit_fixed(t, s, mask, acc_p)
+				lfp["free"] = true
+				return lfp
 	if free:
 		# normal equations for basis [1, t, q] with q = -0.5 t^2
 		var m := [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]

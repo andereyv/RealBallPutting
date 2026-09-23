@@ -346,3 +346,20 @@ func _align_cylinder_transform(pos: Vector3, up: Vector3, length: float, radius:
 		basis = Basis(Vector3.RIGHT, PI)
 	basis = basis.scaled(Vector3(radius, length, radius))
 	return Transform3D(basis, pos)
+
+## World position of an OpenXR hand joint (JOINT_* constants); only meaningful when joint_ok(i).
+func joint(i: int) -> Vector3:
+	return _joint_world_positions[i] if i >= 0 and i < _joint_world_positions.size() else Vector3.ZERO
+
+func joint_ok(i: int) -> bool:
+	return is_hand_tracked and i >= 0 and i < _joint_valid.size() and _joint_valid[i]
+
+## Unit normal pointing OUT OF THE PALM (world), from wrist + index/little metacarpals; ZERO if not tracked.
+func palm_normal() -> Vector3:
+	if not (joint_ok(JOINT_WRIST) and joint_ok(JOINT_INDEX_METACARPAL) and joint_ok(JOINT_LITTLE_METACARPAL)):
+		return Vector3.ZERO
+	var w := joint(JOINT_WRIST)
+	var v1 := joint(JOINT_INDEX_METACARPAL) - w
+	var v2 := joint(JOINT_LITTLE_METACARPAL) - w
+	var n := v1.cross(v2) if hand_side == HandSide.RIGHT else v2.cross(v1)
+	return n.normalized() if n.length_squared() > 1e-8 else Vector3.ZERO

@@ -1,45 +1,8 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Shader" path="res://shaders/flag_fabric.gdshader" id="1_flag_shader"]
 [ext_resource type="Shader" path="res://shaders/split_screen_object.gdshader" id="2_split_shader"]
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_cup_rim"]
-render_priority = 0
-shader = ExtResource("2_split_shader")
-shader_parameter/albedo_color = Color(0.98, 0.98, 0.98, 1)
-shader_parameter/roughness = 0.2
-shader_parameter/metallic = 0.0
-shader_parameter/enable_split_screen = false
-shader_parameter/split_screen_x = 0.5
-shader_parameter/invert_split = false
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_cup_rim"]
-material = SubResource("ShaderMaterial_cup_rim")
-top_radius = 0.054
-bottom_radius = 0.054
-height = 0.025
-radial_segments = 36
-rings = 1
-cap_top = false
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_cup_interior"]
-render_priority = 0
-shader = ExtResource("2_split_shader")
-shader_parameter/albedo_color = Color(0.04, 0.05, 0.04, 1)
-shader_parameter/roughness = 0.95
-shader_parameter/metallic = 0.0
-shader_parameter/enable_split_screen = false
-shader_parameter/split_screen_x = 0.5
-shader_parameter/invert_split = false
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_cup_interior"]
-material = SubResource("ShaderMaterial_cup_interior")
-top_radius = 0.052
-bottom_radius = 0.052
-height = 0.12
-radial_segments = 32
-rings = 1
-cap_top = false
+[ext_resource type="Script" path="res://scripts/environment/cup_liner.gd" id="3_cup_liner"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_ferrule"]
 render_priority = 0
@@ -53,9 +16,9 @@ shader_parameter/invert_split = false
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_ferrule"]
 material = SubResource("ShaderMaterial_ferrule")
-top_radius = 0.013
-bottom_radius = 0.013
-height = 0.08
+top_radius = 0.0088
+bottom_radius = 0.0088
+height = 0.11
 radial_segments = 20
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_staff"]
@@ -70,8 +33,8 @@ shader_parameter/invert_split = false
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_staff"]
 material = SubResource("ShaderMaterial_staff")
-top_radius = 0.012
-bottom_radius = 0.012
+top_radius = 0.0085
+bottom_radius = 0.0085
 height = 2.2
 radial_segments = 20
 
@@ -87,8 +50,8 @@ shader_parameter/invert_split = false
 
 [sub_resource type="SphereMesh" id="SphereMesh_acorn"]
 material = SubResource("ShaderMaterial_acorn")
-radius = 0.018
-height = 0.035
+radius = 0.016
+height = 0.031
 radial_segments = 20
 rings = 10
 
@@ -104,8 +67,8 @@ shader_parameter/invert_split = false
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_swivel"]
 material = SubResource("ShaderMaterial_swivel")
-top_radius = 0.015
-bottom_radius = 0.015
+top_radius = 0.0115
+bottom_radius = 0.0115
 height = 0.02
 radial_segments = 16
 
@@ -131,20 +94,13 @@ subdivide_depth = 24
 
 [node name="GolfFlagAssembly" type="Node3D"]
 
-[node name="WhiteCupRim" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.0125, 0)
-cast_shadow = 1
-mesh = SubResource("CylinderMesh_cup_rim")
-
-[node name="CupInteriorDark" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.06, 0)
-cast_shadow = 1
-mesh = SubResource("CylinderMesh_cup_interior")
+[node name="CupLiner" type="MeshInstance3D" parent="."]
+script = ExtResource("3_cup_liner")
 
 [node name="Flagstick" type="Node3D" parent="."]
 
 [node name="Ferrule" type="MeshInstance3D" parent="Flagstick"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.04, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.054, 0)
 cast_shadow = 1
 mesh = SubResource("CylinderMesh_ferrule")
 
