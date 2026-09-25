@@ -12,6 +12,13 @@ uniform float wind_strength : hint_range(0.01, 0.3) = 0.08;
 uniform float fabric_roughness : hint_range(0.2, 1.0) = 0.60;
 uniform float velvet_sheen : hint_range(0.0, 1.5) = 0.65;
 uniform float translucency : hint_range(0.0, 1.0) = 0.50;
+// Hole number (rounds): white digits printed on both sides; the texture is a square with the number centred
+uniform bool show_number = false;
+uniform sampler2D number_tex : source_color, filter_linear_mipmap;
+uniform vec4 number_color : source_color = vec4(0.97, 0.97, 0.95, 1.0);
+uniform vec2 number_center = vec2(0.53, 0.52);   // flag UV
+uniform float number_height = 0.78;              // of the flag height
+uniform float flag_aspect = 1.4286;              // width / height of the cloth (0.5 x 0.35 m)
 
 group_uniforms SplitScreenMR;
 uniform bool enable_split_screen = true;
@@ -98,6 +105,18 @@ void fragment() {
 	// Hem fold darkening (shadow inside folded fabric edge)
 	cloth_color = mix(cloth_color, cloth_color * 0.76 + vec3(stitch), hem_mask);
 	
+	if (show_number) {
+		vec2 box = vec2(number_height / flag_aspect, number_height);
+		vec2 nuv = (UV - number_center) / box + 0.5;
+		if (!FRONT_FACING) {
+			nuv.x = 1.0 - nuv.x; // readable from the back as well
+		}
+		if (nuv.x > 0.0 && nuv.x < 1.0 && nuv.y > 0.0 && nuv.y < 1.0) {
+			float ink = texture(number_tex, nuv).a;
+			cloth_color = mix(cloth_color, number_color.rgb + weave * 0.5, ink * (1.0 - hem_mask));
+		}
+	}
+
 	// Blend with reinforced white canvas header sleeve
 	vec3 final_albedo = mix(cloth_color, header_color.rgb + (weave * 0.5), header_mask);
 	

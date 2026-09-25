@@ -53,7 +53,23 @@ func _ready() -> void:
 	_init_noise()
 	generate_green()
 
+var _suppress_refresh := false
+var _mesh_cache := {} # shape parameters -> [mesh, collision shape]
+
+func _shape_key() -> String:
+	return "%s|%s|%d|%d|%s|%s|%s|%s|%s|%s|%s" % [green_length, green_width, resolution_x, resolution_z, overall_grade_slope,
+		cross_break_strength, tier_ridge_height, noise_amplitude, noise_frequency, fringe_width, organic_edge_variance]
+
+## Move the cup without rebuilding the mesh (the cup is cut in the shader; only the physics and shader need it).
+func set_cup_fast(v: Vector2) -> void:
+	_suppress_refresh = true
+	cup_position_xz = v
+	_suppress_refresh = false
+	_apply_cup_to_material()
+
 func _queue_refresh() -> void:
+	if _suppress_refresh:
+		return
 	if not _is_dirty and is_inside_tree():
 		_is_dirty = true
 		call_deferred("_regenerate_if_dirty")
@@ -83,7 +99,19 @@ func apply_profile(profile: Resource) -> void:
 	cup_radius = profile.cup_radius
 	cup_depth = profile.cup_depth
 	_init_noise()
+	_is_dirty = false # the setters above queued a rebuild; it happens right here (or comes from the cache)
+	var key := _shape_key()
+	if _mesh_cache.has(key):
+		# rounds switch greens every few holes: reuse the mesh + collision built the first time (~1 s on Quest)
+		mesh = _mesh_cache[key][0]
+		var col := get_node_or_null("StaticBody3D/CollisionShape3D") as CollisionShape3D
+		if col != null:
+			col.shape = _mesh_cache[key][1]
+		_apply_cup_to_material()
+		return
 	generate_green()
+	var col2 := get_node_or_null("StaticBody3D/CollisionShape3D") as CollisionShape3D
+	_mesh_cache[key] = [mesh, col2.shape if col2 != null else null]
 
 func _init_noise() -> void:
 	if _fast_noise == null:
@@ -95,6 +123,40 @@ func _init_noise() -> void:
 
 ## Analytical height function at any (x, z) coordinate
 func get_surface_height(x: float, z: float) -> float:
+	return _height(overall_grade_slope, tier_ridge_height, cross_break_strength, noise_amplitude, _fast_noise,
+		green_width, green_length, x, z)
+
+## The same surface for a GreenProfile without a generator in the scene (course_catalog checks cup spots with it).
+static var _profile_noise := {}
+static func profile_height(profile: Resource, x: float, z: float) -> float:
+	var f: float = profile.noise_frequency
+	if not _profile_noise.has(f):
+		var n := FastNoiseLite.new()
+		n.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+		n.frequency = f
+		n.fractal_octaves = 2
+		n.fractal_gain = 0.4
+		_profile_noise[f] = n
+	return _height(profile.overall_grade_slope, profile.tier_ridge_height, profile.cross_break_strength,
+		profile.noise_amplitude, _profile_noise[f], profile.green_width, profile.green_length, x, z)
+
+## Steepest slope (rise over run) at p and on rings 0.25 m and 0.5 m around it.
+static func profile_max_slope(profile: Resource, p: Vector2, radius: float = 0.5) -> float:
+	var worst := 0.0
+	var e := 0.02
+	var pts: Array[Vector2] = [p]
+	for r in [radius * 0.5, radius]:
+		for k in 8:
+			var a := TAU * float(k) / 8.0
+			pts.append(p + Vector2(cos(a), sin(a)) * r)
+	for q in pts:
+		var dx := (profile_height(profile, q.x + e, q.y) - profile_height(profile, q.x - e, q.y)) / (2.0 * e)
+		var dz := (profile_height(profile, q.x, q.y + e) - profile_height(profile, q.x, q.y - e)) / (2.0 * e)
+		worst = maxf(worst, Vector2(dx, dz).length())
+	return worst
+
+static func _height(overall_grade_slope: float, tier_ridge_height: float, cross_break_strength: float,
+		noise_amplitude: float, noise: FastNoiseLite, green_width: float, green_length: float, x: float, z: float) -> float:
 	# 1. Subtle back-to-front grade (higher at the back pin shelf)
 	var base_slope := -z * overall_grade_slope
 	
@@ -108,8 +170,8 @@ func get_surface_height(x: float, z: float) -> float:
 	
 	# 4. Organic micro-swales via low-amplitude noise
 	var organic := 0.0
-	if _fast_noise != null:
-		organic = _fast_noise.get_noise_2d(x, z) * noise_amplitude
+	if noise != null:
+		organic = noise.get_noise_2d(x, z) * noise_amplitude
 		
 	# 5. Natural perimeter apron fall-off (edges roll gently away from green)
 	var norm_x := (x / (green_width * 0.5))

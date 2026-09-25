@@ -5,13 +5,13 @@
 [resource]
 render_priority = -128
 shader = ExtResource("1_shader")
-shader_parameter/sky_top_color = Color(0.32, 0.55, 0.9, 1)
-shader_parameter/sky_horizon_color = Color(0.7, 0.82, 0.92, 1)
+shader_parameter/sky_top_color = Color(0.30, 0.50, 0.82, 1)
+shader_parameter/sky_horizon_color = Color(0.93, 0.85, 0.72, 1)
 shader_parameter/ground_bottom_color = Color(0.22, 0.32, 0.2, 1)
-shader_parameter/ground_horizon_color = Color(0.55, 0.68, 0.6, 1)
+shader_parameter/ground_horizon_color = Color(0.62, 0.66, 0.58, 1)
 shader_parameter/enable_split_screen = true
 shader_parameter/split_plane_point = Vector3(0, 0, 2.4)
 shader_parameter/split_plane_normal = Vector3(0, 0, 1)
 shader_parameter/invert_split = false
 shader_parameter/divider_color = Color(0.2, 0.9, 1, 1)
-shader_parameter/divider_angular_width = 0.005
+shader_parameter/divider_angular_width = 0.0

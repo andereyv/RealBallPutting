@@ -49,3 +49,6 @@ Claude outputs/
 
 # Replay tool build output
 /tools/replay/build/
+
+# 3D models & downloaded assets (fetch with tools/download_nature_assets.py)
+models/

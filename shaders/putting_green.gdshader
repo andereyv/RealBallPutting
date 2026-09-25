@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode blend_mix, depth_draw_always, cull_back, diffuse_burley, specular_schlick_ggx;
+render_mode blend_mix, depth_draw_always, cull_back, diffuse_lambert, specular_schlick_ggx; // lambert: cheaper on Quest (2026-09-24)
 
 // === AUTHENTIC CHAMPIONSHIP GOLF GREEN SHADER ===
 // With green-reading flow lines, elevation contours & Soft MR Boundary Blend
@@ -49,6 +49,7 @@ uniform vec3 split_plane_normal = vec3(1.0, 0.0, 0.0);
 uniform float split_divider_width = 0.015;
 uniform float split_blend_width = 0.35; // 35 cm soft feathering / blur transition zone
 uniform bool show_split_laser = false; // Soft organic blend without harsh laser line by default
+uniform float split_fade_angular = 0.0; // room edge (xr_controller ROOM_EDGES): far parts of the edge fade wider, half as wide as the scenery
 uniform bool invert_split = false;
 uniform vec3 split_divider_color : source_color = vec3(0.2, 0.9, 1.0);
 
@@ -99,8 +100,9 @@ void fragment() {
 		// In between: Soft organic feathering zone
 		if (dist >= 0.0) {
 			discard; // Completely in physical room
-		} else if (dist > -split_blend_width) {
-			float t = clamp(-dist / max(split_blend_width, 0.01), 0.0, 1.0);
+		} else if (dist > -max(split_blend_width, split_fade_angular * 0.5 * distance(v_world_pos, CAMERA_POSITION_WORLD))) {
+			float bw = max(split_blend_width, split_fade_angular * 0.5 * distance(v_world_pos, CAMERA_POSITION_WORLD));
+			float t = clamp(-dist / max(bw, 0.01), 0.0, 1.0);
 			// Organic micro-turf edge blade noise for soft realistic dissipation
 			float edge_noise = (hash21(v_world_pos.xz * 65.0) - 0.5) * 0.14;
 			mr_blend_factor = smoothstep(0.0, 1.0, clamp(t + edge_noise, 0.0, 1.0));
@@ -192,28 +194,29 @@ void fragment() {
 		slope_color = mix(slope_color, vec3(1.0, 0.32, 0.12), smoothstep(0.50, 1.0, t_slope));
 
 		float flow = 0.0;
-		if (show_flow_lines) {
+		if (show_flow_lines && flow_aa < 0.14) { // far away the streaks are faded out anyway: skip them
 			vec2 base = floor(flow_coord);
-			float tail = mix(0.7, 1.7, smoothstep(0.004, 0.035, slope)); // tail length (cells)
+			float tail = mix(0.5, 1.0, smoothstep(0.004, 0.035, slope)); // tail length (cells)
 			float half_w = 0.5 * flow_width / flow_cell_size;               // half width at the head (cells)
-			for (int j = -1; j <= 1; j++) {
-				for (int i = -1; i <= 1; i++) {
-					vec2 cell = base + vec2(float(i), float(j));
-					float h1 = hash21(cell + vec2(0.37, 1.91));
-					float h2 = hash21(cell + vec2(7.13, 3.57));
-					vec2 c = cell + 0.5 + (vec2(h1, h2) - 0.5) * 0.7;          // jittered start point
-					float ph = fract(TIME * flow_speed + h1 * 7.31);          // this streak's life, 0..1
-					vec2 head = c + fdir * (ph - 0.5) * 1.6;                  // drifts 1.6 cells downhill per life
-					vec2 d = flow_coord - head;
-					float behind = -dot(d, fdir);                             // > 0 = in the tail
-					float across = abs(dot(d, fperp));
-					float taper = 1.0 - clamp(behind / tail, 0.0, 1.0);
-					float w = half_w * (0.35 + 0.65 * taper);
-					float line = 1.0 - smoothstep(w - flow_aa, w + flow_aa, across);
-					float head_cap = smoothstep(-w - flow_aa, 0.0, behind);   // rounded-ish, crisp head
-					float life = sin(3.14159 * ph);                           // fade in, fade out
-					flow = max(flow, line * head_cap * taper * taper * life);
-				}
+			// 2026-09-24: two streak cells per pixel (its own + the one upstream, where tails come from) instead of 3 x 3.
+			// Measured on Quest 3: the 3 x 3 loop cost ~30 fps. Streaks are kept short enough to stay in those cells.
+			vec2 up_step = abs(fdir.x) > abs(fdir.y) ? vec2(-sign(fdir.x), 0.0) : vec2(0.0, -sign(fdir.y));
+			for (int k = 0; k < 2; k++) {
+				vec2 cell = base + (k == 0 ? vec2(0.0) : up_step);
+				float h1 = hash21(cell + vec2(0.37, 1.91));
+				float h2 = fract(h1 * 43.758 + 0.31);
+				vec2 c = cell + 0.5 + (vec2(h1, h2) - 0.5) * 0.4;          // jittered start point
+				float ph = fract(TIME * flow_speed + h1 * 7.31);          // this streak's life, 0..1
+				vec2 head = c + fdir * (ph - 0.5) * 0.9;                  // drifts 0.9 cells downhill per life
+				vec2 d = flow_coord - head;
+				float behind = -dot(d, fdir);                             // > 0 = in the tail
+				float across = abs(dot(d, fperp));
+				float taper = 1.0 - clamp(behind / tail, 0.0, 1.0);
+				float w = half_w * (0.35 + 0.65 * taper);
+				float line = 1.0 - smoothstep(w - flow_aa, w + flow_aa, across);
+				float head_cap = smoothstep(-w - flow_aa, 0.0, behind);   // rounded-ish, crisp head
+				float life = sin(3.14159 * ph);                           // fade in, fade out
+				flow = max(flow, line * head_cap * taper * taper * life);
 			}
 			flow *= smoothstep(0.003, 0.010, slope);         // flat ground: no streaks
 			flow *= mix(0.55, 1.0, t_slope) * flow_intensity; // steeper = brighter

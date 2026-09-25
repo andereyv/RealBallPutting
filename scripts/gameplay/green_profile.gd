@@ -51,6 +51,15 @@ static func create_flat_practice() -> GreenProfile:
 	p.cup_position_xz = Vector2(0.0, 0.0)
 	return p
 
+## Factory by id (course_catalog); unknown ids give the championship tiered green.
+static func by_id(profile_id: String) -> GreenProfile:
+	match profile_id:
+		"breaking_slope":
+			return create_breaking_slope()
+		"lightning_fast":
+			return create_lightning_fast()
+	return create_championship_tiered()
+
 ## Factory: Championship Tiered Green (Default tournament layout)
 static func create_championship_tiered() -> GreenProfile:
 	var p := GreenProfile.new()

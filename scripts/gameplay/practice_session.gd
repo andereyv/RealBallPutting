@@ -31,11 +31,15 @@ var _left_sum := 0.0 # summed distance left (m) over putts that were not holed
 var _left_n := 0
 
 var head_provider: Callable # returns the viewer's head position (world); set by xr_controller
+var up_provider: Callable # returns the viewer's up vector (camera basis.y)
 var card: GlassPanel
 var _marker: Node3D
 var _ring_mat: StandardMaterial3D
 var _card_t := -1.0 # time since shown; < 0 = hidden
 var last_text := ""
+## Rounds (game_flow.gd) relabel the card: "Hole 3 · putt 2" instead of "Putt 7", the score instead of session stats
+var title_override := ""
+var footer_override := ""
 
 func _ready() -> void:
 	top_level = true
@@ -111,7 +115,9 @@ func on_putt_finished(final_pos: Vector3, was_holed: bool, tee: Vector3, cup: Ve
 	var footer := "%d of %d holed" % [holed, putts]
 	if best_streak >= 2:
 		footer += " · best streak %d" % best_streak
-	_build_card(tag, accent, "Putt %d" % putts, headline, subline,
+	if footer_override != "":
+		footer = footer_override
+	_build_card(tag, accent, title_override if title_override != "" else "Putt %d" % putts, headline, subline,
 		[["%.2f" % speed, "m/s"], [start_txt, ""], [avg_txt, ""]], ["Speed", "Start line", "Avg. left"], footer)
 
 	_place_card(final_pos, tee)
@@ -122,6 +128,15 @@ func on_putt_finished(final_pos: Vector3, was_holed: bool, tee: Vector3, cup: Ve
 	_marker.visible = not was_holed # a holed ball is in the cup; no marker on the green
 	last_text = "%s | %s | %s | %.2f m/s · start %s | %s" % [tag, headline, subline, speed, start_txt, footer]
 	return last_text
+
+## Build a card once, invisible (fonts, layout), so the first real result doesn't stutter.
+func prewarm() -> void:
+	_build_card("GOOD PACE", COL_GOOD, "Putt 1", "27 cm past", "5 cm right of the hole",
+		[["1.23", "m/s"], ["0.5° L", ""], ["45 cm", ""]], ["Speed", "Start line", "Avg. left"], "1 of 3 holed · Hole 1 · putt 2")
+	_hide_card()
+
+func hide_marker() -> void:
+	_marker.visible = false
 
 func _process(delta: float) -> void:
 	if _card_t < 0.0:
@@ -141,7 +156,7 @@ func _process(delta: float) -> void:
 	card.set_alpha(a)
 	card.scale = Vector3.ONE * s
 	if head_provider.is_valid():
-		card.face(head_provider.call())
+		card.face(head_provider.call(), up_provider.call() if up_provider.is_valid() else Vector3.UP)
 
 func _hide_card() -> void:
 	_card_t = -1.0

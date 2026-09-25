@@ -58,6 +58,8 @@ const BONE_CONNECTIONS = [
 ]
 
 @export var is_hands_enabled: bool = true
+## Tracking keeps running while this is off; only the pinch ring (a setup aid) is hidden.
+var show_pinch_ring: bool = true
 
 # Shader & Material References
 var _quest_shader: Shader = preload("res://shaders/quest_outlined_hand.gdshader")
@@ -265,6 +267,9 @@ func update_hand_tracking(oxr: OpenXRInterface, origin_transform: Transform3D, c
 
 func _update_pinch_indicator(camera_pos: Vector3) -> void:
 	if _pinch_ring == null:
+		return
+	if not show_pinch_ring:
+		_pinch_ring.visible = false
 		return
 		
 	# Pinch gauge visibility threshold (within 7.5 cm)

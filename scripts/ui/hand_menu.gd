@@ -38,14 +38,19 @@ var _cooldown := 0.0
 var _debug_force_open := false # tests / desktop preview
 var _pinned := false  # opened with the menu button: floats in front of the player instead of above the hand
 var _pinned_idle := 0.0
+var _poke # scripts/ui/poke_input.gd (same touch behaviour as the main menu)
+var _hold_still := false # a fingertip is at the glass: the panel stops following the palm
 const PINNED_IDLE_CLOSE_S := 8.0
 
 func _ready() -> void:
 	top_level = true
-	panel = GlassPanel.new(Vector2i(600, 780), 0.20)
+	# 0.26 m wide -> rows ~3.6 cm tall: a comfortable fingertip target (was 0.20 m / 2.2 cm rows, 2026-09-24)
+	panel = GlassPanel.new(Vector2i(600, 780), 0.26)
 	panel.name = "HandMenuPanel"
 	add_child(panel)
 	panel.set_alpha(0.0)
+	_poke = preload("res://scripts/ui/poke_input.gd").new()
+	add_child(_poke)
 
 ## Call every frame. menu_hand / poke_hand: xr_hand_visualizer nodes (may be null). head: viewer position.
 func update(delta: float, menu_hand, poke_hand, head: Vector3, allowed: bool) -> void:
@@ -99,15 +104,17 @@ func update(delta: float, menu_hand, poke_hand, head: Vector3, allowed: bool) ->
 	_alpha = move_toward(_alpha, 1.0 if is_open else 0.0, delta / 0.18)
 	panel.set_alpha(_alpha)
 	if _alpha <= 0.0:
+		_poke.hide_cursor()
 		return
 
 	# follow the palm (only while the palm is still up; otherwise hold still so the finger can reach it).
 	# Shifted towards the other hand, so it doesn't sit on Meta's own menu icon at the pinch point.
-	if palm_ok and not _debug_force_open and not _pinned:
+	if palm_ok and not _debug_force_open and not _pinned and not _hold_still:
 		var right := (head - palm).cross(Vector3.UP).normalized() * (-1.0 if menu_hand_is_left else 1.0)
 		var target := palm + Vector3.UP * (0.07 + panel.height_m() * 0.5) + right * 0.09
 		panel.global_position = panel.global_position.lerp(target, clampf(delta * 14.0, 0.0, 1.0)) if _alpha > 0.05 else target
-	panel.face(head)
+	if not _hold_still:
+		panel.face(head)
 
 	_rebuild_if_needed()
 	if _flash_t > 0.0:
@@ -117,23 +124,21 @@ func update(delta: float, menu_hand, poke_hand, head: Vector3, allowed: bool) ->
 			_restyle()
 
 	var new_hover := ""
-	if is_open and finger_near:
-		var local := panel.global_transform.affine_inverse() * tip
-		var depth := local.z # > 0 = in front of the glass (towards the viewer)
-		var px := Vector2((local.x / panel.width_m + 0.5) * panel.size_px.x, (0.5 - local.y / panel.height_m()) * panel.size_px.y)
-		var hit_id := _hit(px)
-		if depth > REARM_DEPTH_M:
-			_armed = true
-		if hit_id != "" and depth < HOVER_DEPTH_M and depth > -0.05:
-			new_hover = hit_id
-			if depth < PRESS_DEPTH_M and _armed and _cooldown <= 0.0:
-				_armed = false
-				_cooldown = PRESS_COOLDOWN_S
-				_flash_id = hit_id
-				_flash_t = 0.25
-				if host != null and host.has_method("menu_action"):
-					host.call("menu_action", hit_id)
-				_sig = "" # values change -> rebuild
+	_hold_still = false
+	if is_open and poke_hand != null and poke_hand.is_hand_tracked and poke_hand.joint_ok(10):
+		var res: Dictionary = _poke.process(panel, [{"key": "poke", "pos": poke_hand.joint(10)}], _hit)
+		_hold_still = res["near"]
+		new_hover = res["hover"]
+		var hit_id: String = res["pressed"]
+		if hit_id != "" and _cooldown <= 0.0:
+			_cooldown = PRESS_COOLDOWN_S
+			_flash_id = hit_id
+			_flash_t = 0.25
+			if host != null and host.has_method("menu_action"):
+				host.call("menu_action", hit_id)
+			_sig = "" # values change -> rebuild
+	else:
+		_poke.hide_cursor()
 	if new_hover != _hover_id:
 		_hover_id = new_hover
 		_restyle()
@@ -152,6 +157,11 @@ func toggle_pinned(head: Vector3, forward: Vector3) -> void:
 	_pinned_idle = 0.0
 	_pose_t = OPEN_HOLD_S
 
+## Build the rows once, invisible, so fonts and the panel are ready before the first real open.
+func prewarm() -> void:
+	_rebuild_if_needed()
+	panel.refresh()
+
 ## Force a rebuild (after an action changed a value outside the menu).
 func invalidate() -> void:
 	_sig = ""
@@ -165,7 +175,7 @@ func _hit(px: Vector2) -> String:
 
 func _rebuild_if_needed() -> void:
 	var items: Array = host.call("menu_items") if host != null and host.has_method("menu_items") else []
-	var sig := JSON.stringify(items)
+	var sig := JSON.stringify(items) + (str(host.call("menu_title")) if host != null and host.has_method("menu_title") else "")
 	if sig == _sig:
 		return
 	_sig = sig
@@ -173,13 +183,15 @@ func _rebuild_if_needed() -> void:
 	_hits.clear()
 	var c := panel.content
 	c.add_theme_constant_override("separation", 10)
-	c.add_child(GlassPanel.make_label("Practice", "Inter-SemiBold", 30, Color(1, 1, 1, 0.55)))
+	var title: String = host.call("menu_title") if host != null and host.has_method("menu_title") else "Practice"
+	c.add_child(GlassPanel.make_label(title, "Inter-SemiBold", 30, Color(1, 1, 1, 0.55)))
 	for it in items:
 		if it.get("stepper", false):
 			c.add_child(_stepper_row(it))
 		else:
 			c.add_child(_row(it))
 	_restyle()
+	panel.fit_height_to_content(200, 1200)
 
 func _row_style() -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()

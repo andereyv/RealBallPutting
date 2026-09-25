@@ -88,6 +88,21 @@ func fit_width_to_content() -> void:
 	(quad.mesh as QuadMesh).size = Vector2(w * mpp, size_px.y * mpp)
 	refresh()
 
+## Shrink/grow the card's height to its content (menus). Keeps the width and the scale (metres per pixel).
+func fit_height_to_content(min_px: int = 200, max_px: int = 2000) -> void:
+	if not is_inside_tree():
+		return
+	await get_tree().process_frame
+	set_height_px(clampi(int(ceil(panel.get_combined_minimum_size().y)) + 2, min_px, max_px))
+
+func set_height_px(h: int) -> void:
+	var mpp := width_m / float(size_px.x)
+	size_px = Vector2i(size_px.x, h)
+	viewport.size = size_px
+	panel.size = Vector2(size_px)
+	(quad.mesh as QuadMesh).size = Vector2(size_px.x * mpp, h * mpp)
+	refresh()
+
 func height_m() -> float:
 	return width_m * float(size_px.y) / float(size_px.x)
 
@@ -105,12 +120,17 @@ func set_alpha(a: float) -> void:
 	_mat.albedo_color = Color(1, 1, 1, _alpha)
 	visible = _alpha > 0.003
 
-## Turn the card towards a point (the viewer's head), staying upright.
-func face(target: Vector3) -> void:
+## Turn the card towards a point (the viewer's head). `up` = the viewer's up vector (camera basis.y) keeps the text
+## level in the viewer's eyes even when looking steeply down at it; Vector3.UP keeps it upright in the world.
+func face(target: Vector3, up: Vector3 = Vector3.UP) -> void:
 	var p := global_position
-	var away := p + (p - target) # face the viewer squarely (also when seen from above), text stays upright
-	if away.distance_squared_to(p) > 1e-6 and absf((target - p).normalized().y) < 0.995:
-		look_at(away, Vector3.UP)
+	var to := target - p
+	if to.length_squared() < 1e-6:
+		return
+	var u := up.normalized()
+	if absf(to.normalized().dot(u)) > 0.995:
+		u = Vector3.UP if absf(to.normalized().y) < 0.995 else Vector3.FORWARD
+	look_at(p - to, u)
 
 func _process(_delta: float) -> void:
 	if _redraw_frames > 0:

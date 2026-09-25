@@ -26,7 +26,7 @@ enum SplitOrientation {
 @export_group("Stereoscopic 3D Split Screen")
 @export var current_mode: SplitMode = SplitMode.SPLIT_SCREEN
 @export var split_orientation: SplitOrientation = SplitOrientation.ACROSS_TARGET_LINE
-@export var world_split_offset_z: float = 0.30 ## Distance (m) ahead of tee box where virtual green begins (was 0.45 until 2026-09-23)
+@export var world_split_offset_z: float = 0.20 ## Distance (m) ahead of tee box where virtual green begins (0.45 -> 0.30 -> 0.20 in 2026-09)
 @export var world_split_offset_x: float = 0.2 ## In meters between stance and ball
 @export var divider_width_m: float = 0.018 ## 1.8 cm glowing 3D laser boundary on the turf
 @export var invert_split: bool = false ## Invert split side if needed
@@ -305,19 +305,107 @@ var _btn_rearm: bool = true
 ## UI on the green (2026-09-23): debug read-outs only in developer view; controls live in a palm-up hand menu
 @export var developer_mode: bool = false ## show debug HUDs, FPS, hand skeletons, raw telemetry and the instant replay
 @export var use_hand_menu: bool = true ## palm-up menu instead of the floor buttons behind the tee
+@export var scenery_on: bool = true ## parkland scenery around the green (false = only the green in your room)
+var scenery_trees: bool = true ## Scenery "Open": ground, hills and sky without the trees
+
+## Putt distance (2026-09-24): the virtual roll is this % of what the measured speed gives. Roll distance goes with
+## speed squared, so the launch speed is scaled by sqrt(pct / 100): 110 % = speed x 1.049. Settings + practice palm.
+var putt_distance_pct: int = 100
+const PUTT_DISTANCE_MIN := 80
+const PUTT_DISTANCE_MAX := 130
+const PUTT_DISTANCE_STEP := 5
+
+func putt_distance_label() -> String:
+	return "%d %%" % putt_distance_pct
+
+func change_putt_distance(step_pct: int) -> void:
+	putt_distance_pct = clampi(putt_distance_pct + step_pct, PUTT_DISTANCE_MIN, PUTT_DISTANCE_MAX)
+	_save_tee_box_settings()
+	_record_event("PUTT DISTANCE: %d %% (speed x%.3f)" % [putt_distance_pct, _putt_speed_factor()])
+
+## Settings row: 100 -> 105 -> ... -> 130 -> 80 -> ... -> 100
+func cycle_putt_distance() -> void:
+	var nxt := putt_distance_pct + PUTT_DISTANCE_STEP
+	if nxt > PUTT_DISTANCE_MAX:
+		nxt = PUTT_DISTANCE_MIN
+	change_putt_distance(nxt - putt_distance_pct)
+
+func _putt_speed_factor() -> float:
+	return putt_force_multiplier * sqrt(float(putt_distance_pct) / 100.0)
+
+## Room edge (2026-09-24): how softly the course fades into the real room at the split. The split plane passes
+## 0.2-0.5 m beside the head, so its far part is a line at the horizon that slides over the nearby room when the head
+## moves; a wide fade leaves no line to follow. Value = sine of the fade angle (split_fade_angular / sky_blend_angular).
+const ROOM_EDGES := {"sharp": 0.04, "soft": 0.25, "wide": 0.5}
+const ROOM_EDGE_NAMES := {"sharp": "Sharp", "soft": "Soft", "wide": "Wide"}
+var room_edge: String = "soft"
+
+func room_edge_label() -> String:
+	return ROOM_EDGE_NAMES.get(room_edge, "Soft")
+
+func _room_edge_fade() -> float:
+	return float(ROOM_EDGES.get(room_edge, 0.25))
+
+## Menus: Sharp -> Soft -> Wide -> Sharp
+func cycle_room_edge() -> void:
+	var order := ["sharp", "soft", "wide"]
+	room_edge = order[(order.find(room_edge) + 1) % order.size()]
+	for mat in _split_materials:
+		if mat != null:
+			mat.set_shader_parameter("split_fade_angular", _room_edge_fade())
+			mat.set_shader_parameter("sky_blend_angular", _room_edge_fade())
+	_save_tee_box_settings()
+	_record_event("ROOM EDGE: %s (%.2f)" % [room_edge, _room_edge_fade()])
+
+const SCENERY_NAMES := {"full": "Parkland", "open": "Open, no trees", "off": "Off"}
+func scenery_mode() -> String:
+	return "off" if not scenery_on else ("full" if scenery_trees else "open")
+
+func scenery_label() -> String:
+	return SCENERY_NAMES[scenery_mode()]
+
+## Menus: Parkland -> Open (no trees) -> Off -> Parkland
+func cycle_scenery() -> void:
+	match scenery_mode():
+		"full":
+			scenery_trees = false
+		"open":
+			scenery_on = false
+		_:
+			scenery_on = true
+			scenery_trees = true
+	_apply_scenery()
+	_save_tee_box_settings()
+	_record_event("SCENERY: %s" % scenery_mode())
+@export var show_fps: bool = true ## frame-rate counter in the corner of the view (Settings; on while we tune performance)
+var display_hz: float = 90.0 ## requested display refresh rate (Settings: 72 / 90 / 120)
+## Performance switches (Settings), so their cost can be seen on the FPS counter in the headset
+var shadows_on: bool = false # off by default: ~10 fps on Quest 3 (2026-09-24 recording)
+var flow_lines_on: bool = true
+var foveation_level: int = 2 ## Quest fixed foveated rendering: 0 off, 1 low, 2 medium, 3 high (dynamic)
+var render_scale: float = 1.0 ## eye-buffer resolution multiplier (Settings: 100 / 90 / 80 / 70 %)
+var _fps_times: PackedFloat32Array = PackedFloat32Array()
+var _fps_t := 0.0
+var _perf_log_t := 0.0
 var _hand_menu = null # scripts/ui/hand_menu.gd
 var _status_pill = null # scripts/ui/status_pill.gd
 var _menu_hint_shown := false
+var _pin_pill = null # distance to the pin, shown while you look at the flag
+var _pin_look_t := 0.0
 var _practice = null # scripts/gameplay/practice_session.gd: result card, finish marker, session stats
+var _flow = null # scripts/gameplay/game_flow.gd: main menu, practice / round flow, scorecard (2026-09-23)
 ## Last split plane sent to the green shader. The virtual ball is only drawn where the green is drawn, so on the
 ## passthrough side you see just the real ball (no second ball rolling next to it).
 var _split_on: bool = false
 var _split_pt: Vector3 = Vector3.ZERO
 var _split_n: Vector3 = Vector3(0, 0, 1)
 var _split_inv: bool = false
-const SPLIT_BLEND_M := 0.25 # soft edge between the real floor and the green (was 0.35)
-const VIRTUAL_BALL_SHOW_DEPTH := 0.12 # m into the virtual side (green is ~50% opaque there)
+const SPLIT_BLEND_M := 0.20 # soft edge between the real floor and the green (was 0.35)
+const VIRTUAL_BALL_SHOW_DEPTH := 0.10 # m into the virtual side (green is ~50% opaque there)
 var _head_fast_t: float = 0.0 # > 0 while the head turned fast in the last 0.5 s (tracker blips, not putts)
+## A pinch starts below 20 mm between thumb and index tip (the 2026-09-23 recording: relaxed hands sat at 25-32 mm,
+## real pinches at 6-11 mm, so the old 38 mm grabbed / pressed on its own). Holding keeps the old 46 / 55 mm release.
+const PINCH_ON_M := 0.020
 const HEAD_FAST_RAD_S := 1.31 # 75 deg/s; real putts measured 30-50 deg/s, false blips 110-120 deg/s
 var _replay_card: Sprite3D = null
 var _replay_card_timer: float = 0.0
@@ -331,6 +419,11 @@ func _ready() -> void:
 	_practice.name = "PracticeSession"
 	add_child(_practice)
 	_practice.head_provider = func(): return xr_camera.global_position if xr_camera != null else global_position + Vector3(0, 1.6, 0)
+	_practice.up_provider = func(): return xr_camera.global_transform.basis.y if xr_camera != null else Vector3.UP
+	_flow = preload("res://scripts/gameplay/game_flow.gd").new()
+	_flow.name = "GameFlow"
+	_flow.host = self
+	add_child(_flow)
 	_hand_menu = preload("res://scripts/ui/hand_menu.gd").new()
 	_hand_menu.name = "HandMenu"
 	_hand_menu.host = self
@@ -338,10 +431,15 @@ func _ready() -> void:
 	_status_pill = preload("res://scripts/ui/status_pill.gd").new()
 	_status_pill.name = "StatusPill"
 	add_child(_status_pill)
+	_pin_pill = preload("res://scripts/ui/status_pill.gd").new()
+	_pin_pill.name = "PinDistancePill"
+	add_child(_pin_pill)
 	_ensure_hand_visualizers()
 	_init_xr_subsystem()
 	_load_tee_box_settings()
+	call_deferred("_apply_display_hz")
 	call_deferred("_apply_green_speed", green_speed_mode, false)
+	call_deferred("_apply_scenery")
 	if auto_record_sessions:
 		get_tree().create_timer(3.0).timeout.connect(_auto_start_recording)
 	_init_audio()
@@ -349,8 +447,9 @@ func _ready() -> void:
 	call_deferred("_setup_split_screen")
 	call_deferred("_init_headset_camera")
 	call_deferred("_connect_ball_signals")
+	call_deferred("_connect_scene_log")
 	call_deferred("_connect_menu_signals")
-	call_deferred("_show_main_menu")
+	call_deferred("_flow_boot")
 
 func _init_audio() -> void:
 	if _audio_player == null:
@@ -455,6 +554,15 @@ func _on_active_player_changed(player) -> void:
 		set_golfer_handedness(h)
 		print("[XRController] Local Multiplayer turn: %s (%s-handed). MR split adapted." % [player.get("player_name"), h.capitalize()])
 
+## SCENE events in the recording: where the virtual green was at every change (tools/replay/replay_view.gd redraws it)
+func _connect_scene_log() -> void:
+	if test_green_controller != null and test_green_controller.has_signal("scene_changed") \
+			and not test_green_controller.is_connected("scene_changed", _on_scene_changed):
+		test_green_controller.connect("scene_changed", _on_scene_changed)
+
+func _on_scene_changed(info: Dictionary) -> void:
+	_record_quiet("SCENE " + JSON.stringify(info))
+
 func _connect_ball_signals() -> void:
 	if golf_ball == null:
 		if test_green_controller != null:
@@ -498,7 +606,8 @@ func _on_virtual_ball_stopped(final_pos: Vector3) -> void:
 		total_roll, roll_cm, roll_ft, _launch_speed, _launch_speed * 2.23694, _launch_angle_deg, dist_str
 	])
 	_record_event("STOPPED: roll=%.2fm (%.0fcm), to_cup=%s" % [total_roll, roll_cm, dist_str])
-	if _practice != null:
+	var flow_card: bool = _flow != null and _flow.on_putt_finished(final_pos, false, cup_world)
+	if _practice != null and not flow_card:
 		_record_event("RESULT: " + _practice.on_putt_finished(final_pos, false, tee_box_pos, cup_world, _launch_speed, _launch_angle_deg))
 	
 	if _tee_telemetry_label != null:
@@ -531,7 +640,8 @@ func _on_virtual_ball_holed() -> void:
 		total_roll, roll_cm, _launch_speed, _launch_speed * 2.23694, _launch_angle_deg
 	])
 	_record_event("BALL HOLED! Roll: %.2fm" % total_roll)
-	if _practice != null:
+	var flow_card: bool = _flow != null and _flow.on_putt_finished(cup_world, true, cup_world)
+	if _practice != null and not flow_card:
 		_record_event("RESULT: " + _practice.on_putt_finished(cup_world, true, tee_box_pos, cup_world, _launch_speed, _launch_angle_deg))
 	_play_lock_chime()
 	var lead_ctrl = right_controller if golfer_handedness == "right" else left_controller
@@ -739,6 +849,13 @@ func _init_headset_camera() -> void:
 
 func _init_xr_subsystem() -> void:
 	xr_interface = XRServer.find_interface("OpenXR")
+	# eye-buffer resolution from Settings, set before the XR session begins (read straight from the settings file:
+	# the rest of the settings load after this)
+	var pcfg := ConfigFile.new()
+	if pcfg.load("user://tee_box_settings.cfg") == OK:
+		render_scale = float(pcfg.get_value("perf", "render_scale", render_scale))
+	if xr_interface is OpenXRInterface:
+		(xr_interface as OpenXRInterface).render_target_size_multiplier = render_scale
 	if xr_interface and xr_interface.is_initialized():
 		print("[XRController] OpenXR interface successfully detected and initialized!")
 		is_xr_active = true
@@ -774,9 +891,9 @@ func _init_xr_subsystem() -> void:
 			var avail_rates = oxr.get_available_display_refresh_rates()
 			var cur_rate = oxr.get_display_refresh_rate()
 			print("[XRController] OpenXR display refresh rates: %s (active: %.1f Hz)" % [avail_rates, cur_rate])
-			if 90.0 in avail_rates and cur_rate != 90.0:
-				oxr.set_display_refresh_rate(90.0)
-				print("[XRController] Configured OpenXR display refresh rate to 90.0 Hz.")
+			if display_hz in avail_rates and cur_rate != display_hz:
+				oxr.set_display_refresh_rate(display_hz)
+				print("[XRController] Configured OpenXR display refresh rate to %.0f Hz." % display_hz)
 
 		_setup_headset_fps_chip()
 		_log_passthrough_status()
@@ -901,10 +1018,10 @@ func _process_body(delta: float) -> void:
 	if current_mode == SplitMode.SPLIT_SCREEN and split_orientation == SplitOrientation.HEAD_GAZE_ALIGNED:
 		_apply_active_plane()
 	
-	# Update OpenXR Hand Visualizers
-	# Hands are visible ONLY during menus or calibration; completely hidden when putting!
-	var hands_active: bool = (current_flow_state != GameFlowState.PUTTING_GAMEPLAY)
-	_set_hand_visualizers_enabled(hands_active)
+	# Update OpenXR Hand Visualizers. Hand TRACKING stays on while putting (the palm-up menu needs it; it was
+	# switched off here, which is why the menu never opened, 2026-09-23). What is drawn is decided in
+	# _update_ui_layer: skeleton only in developer view, pinch ring only outside play.
+	_set_hand_visualizers_enabled(true)
 	var eye_pos = xr_camera.global_position if xr_camera != null else global_position + Vector3(0, 1.65, 0)
 	var oxr = xr_interface as OpenXRInterface if xr_interface is OpenXRInterface else null
 	if left_hand_vis != null and left_hand_vis.has_method("update_hand_tracking"):
@@ -919,7 +1036,7 @@ func _process_body(delta: float) -> void:
 		_process_welcome_screen(delta)
 		if _tee_box_marker != null:
 			_tee_box_marker.visible = false
-	elif enable_tee_box:
+	elif enable_tee_box and (current_flow_state == GameFlowState.TEE_CALIBRATION or current_flow_state == GameFlowState.PUTTING_GAMEPLAY):
 		_ensure_tee_box_marker()
 		if _tee_box_marker != null:
 			# Track running time and decrement cooldown
@@ -1015,8 +1132,8 @@ func _process_body(delta: float) -> void:
 					active_is_hand = l_hand_active
 					_floor_aim_valid = l_floor_valid
 			else:
-				var r_gripping = (rg >= 0.25 or (r_hand_active and r_pinch_dist < 0.038))
-				var l_gripping = (lg >= 0.25 or (l_hand_active and l_pinch_dist < 0.038))
+				var r_gripping = (rg >= 0.25 or (r_hand_active and r_pinch_dist < PINCH_ON_M))
+				var l_gripping = (lg >= 0.25 or (l_hand_active and l_pinch_dist < PINCH_ON_M))
 				
 				if r_gripping and r_floor_valid:
 					active_aim_hand = "right"
@@ -1197,7 +1314,7 @@ func _process_body(delta: float) -> void:
 				if hover_target != "NONE" and _grab_cooldown <= 0.0 and _hover_stable_t >= HOVER_STABLE_S:
 					var grab_triggered = false
 					var grab_src = ""
-					if active_is_hand and active_pinch < 0.038 and _pinch_released:
+					if active_is_hand and active_pinch < PINCH_ON_M and _pinch_released:
 						_pinch_released = false
 						grab_triggered = true
 						grab_src = active_aim_hand + "_pinch"
@@ -1276,7 +1393,7 @@ func _process_body(delta: float) -> void:
 					if behind_d >= AIM_BEHIND_MIN_M and facing >= AIM_BEHIND_FACING:
 						_aim_behind_active = true
 						var dirv := to_tee / behind_d
-						var holding: bool = (active_is_hand and active_pinch < 0.038) or active_grip >= 0.28 or active_trig >= 0.35
+						var holding: bool = (active_is_hand and active_pinch < PINCH_ON_M) or active_grip >= 0.28 or active_trig >= 0.35
 						if holding:
 							if _aim_behind_armed and _aim_behind_t >= 0.0:
 								_aim_behind_t += delta
@@ -2623,7 +2740,7 @@ func _handoff_to_virtual_ball(fwd_disp: float, forward_dir_2d: Vector2) -> void:
 	
 	# Photocell Gate & High-Speed CV telemetry returns reconstructed physical launch speed v0 directly:
 	if _is_high_speed_telemetry_putt:
-		_launch_speed = clampf(_launch_speed, 0.25, 5.5)
+		_launch_speed = clampf(_launch_speed * _putt_speed_factor(), 0.25, 5.5)
 		_is_high_speed_telemetry_putt = false
 		_stroke_samples.clear()
 	else:
@@ -2646,7 +2763,7 @@ func _handoff_to_virtual_ball(fwd_disp: float, forward_dir_2d: Vector2) -> void:
 			measured_dir = forward_dir_2d
 		
 		var raw_speed := measured_speed # was maxf(_launch_speed, measured_speed), which biased speeds upward
-		_launch_speed = clampf(raw_speed * putt_force_multiplier, 0.30, 5.0)
+		_launch_speed = clampf(raw_speed * _putt_speed_factor(), 0.30, 5.0)
 		_launch_direction = measured_dir
 		_launch_angle_deg = rad_to_deg(forward_dir_2d.angle_to(_launch_direction))
 
@@ -2663,7 +2780,7 @@ func _handoff_to_virtual_ball(fwd_disp: float, forward_dir_2d: Vector2) -> void:
 		_launch_speed, _launch_speed * 2.23694,
 		_launch_angle_deg, _stroke_samples.size(), _total_running_time - _hit_timestamp
 	])
-	_record_event("MEASURED: speed=%.2f m/s, angle=%+.1f°, samples=%d" % [_launch_speed, _launch_angle_deg, _stroke_samples.size()])
+	_record_event("MEASURED: speed=%.2f m/s, angle=%+.1f°, samples=%d, distance=%d %%" % [_launch_speed, _launch_angle_deg, _stroke_samples.size(), putt_distance_pct])
 	
 	if _tee_telemetry_label != null:
 		_tee_telemetry_label.text = "SPEED: %.2f m/s (%.1f mph)\nANGLE: %+.1f°" % [_launch_speed, _launch_speed * 2.23694, _launch_angle_deg]
@@ -2964,14 +3081,19 @@ func _set_extra_floor_btns_visible(v: bool) -> void:
 
 # ------------------------------------------------------------------ UI layer (runs after the game logic every frame)
 func _update_ui_layer(delta: float) -> void:
+	_update_sky_dome_visibility()
+	if _flow != null:
+		_flow.update(delta)
 	var dev := developer_mode
 	if _tee_hud_label != null: _tee_hud_label.visible = dev
-	if _headset_fps_chip != null: _headset_fps_chip.visible = dev
+	_update_fps_chip(delta)
+	if _headset_fps_chip != null: _headset_fps_chip.visible = dev or show_fps
 	if _wrist_hud_label != null: _wrist_hud_label.visible = dev
+	var playing := current_flow_state == GameFlowState.PUTTING_GAMEPLAY and is_tee_confirmed
 	for hv in [left_hand_vis, right_hand_vis]:
 		if hv != null:
-			hv.show_skeleton = dev
-	var playing := current_flow_state == GameFlowState.PUTTING_GAMEPLAY and is_tee_confirmed
+			hv.show_skeleton = dev or not playing
+			hv.show_pinch_ring = dev or not playing
 	if playing and use_hand_menu and not _menu_hint_shown and _notice_t <= 0.0:
 		_menu_hint_shown = true
 		_show_notice("Menu: look at your %s palm" % ("left" if golfer_handedness == "right" else "right"), 5.0, Color(0.35, 0.72, 1.0))
@@ -2982,15 +3104,19 @@ func _update_ui_layer(delta: float) -> void:
 	if _replay_card != null and not dev:
 		_replay_card.visible = false
 	var head: Vector3 = xr_camera.global_position if xr_camera != null else global_position + Vector3(0, 1.6, 0)
+	var cam_up: Vector3 = xr_camera.global_transform.basis.y if xr_camera != null else Vector3.UP
 
 	# Status pill replaces the raw telemetry text while playing (setup screens keep their instructions)
 	if _tee_telemetry_label != null:
 		_tee_telemetry_label.visible = dev or not playing
 	if _status_pill != null:
 		if playing and ball_tracking_state != BallTrackingState.BALL_ROLLING:
+			# beside the ball on the far side of the line (away from the golfer's feet), a little behind it:
+			# never in the putting line (2026-09-23)
 			var r := deg_to_rad(tee_box_rotation_deg)
 			var fwd := Vector3(-sin(r), 0.0, -cos(r))
-			_status_pill.place(tee_box_pos + fwd * 0.22 + Vector3(0, 0.28, 0), head)
+			var far_side := fwd.cross(Vector3.UP) * (1.0 if golfer_handedness == "right" else -1.0)
+			_status_pill.place(tee_box_pos + far_side * 0.32 - fwd * 0.05 + Vector3(0, 0.12, 0), head, cam_up)
 			if _notice_t > 0.0:
 				var parts := _notice_text.split("\n")
 				_status_pill.show_status(parts[0], parts[1] if parts.size() > 1 else "", _notice_color, _notice_t)
@@ -3004,11 +3130,45 @@ func _update_ui_layer(delta: float) -> void:
 		else:
 			_status_pill.hide_status()
 
+	_update_pin_pill(delta, head, playing)
+
 	if _hand_menu != null and use_hand_menu:
 		var menu_hand = left_hand_vis if golfer_handedness == "right" else right_hand_vis
 		var poke_hand = right_hand_vis if golfer_handedness == "right" else left_hand_vis
 		_hand_menu.menu_hand_is_left = golfer_handedness == "right"
 		_hand_menu.update(delta, menu_hand, poke_hand, head, playing and ball_tracking_state != BallTrackingState.BALL_ROLLING)
+
+## Look at the flag -> "2.4 m · 3 cm uphill" floats beside the flagstick (hidden while the ball rolls or a result shows)
+func _update_pin_pill(delta: float, head: Vector3, playing: bool) -> void:
+	if _pin_pill == null:
+		return
+	var fa = test_green_controller.get("flag_assembly") if test_green_controller != null else null
+	var card_up: bool = _practice != null and _practice.get("_card_t") != null and float(_practice.get("_card_t")) >= 0.0
+	if _flow != null and _flow.card_visible():
+		card_up = true
+	if not playing or fa == null or xr_camera == null or ball_tracking_state == BallTrackingState.BALL_ROLLING or card_up:
+		_pin_look_t = 0.0
+		_pin_pill.hide_status()
+		return
+	var cup: Vector3 = fa.global_position
+	var look := -xr_camera.global_transform.basis.z
+	var to_cup := cup + Vector3.UP * 0.3 - head
+	var ang := rad_to_deg(look.angle_to(to_cup))
+	_pin_look_t = _pin_look_t + delta if ang < 12.0 else 0.0
+	if _pin_look_t < 0.25:
+		if ang > 18.0:
+			_pin_pill.hide_status()
+		return
+	var d := Vector2(cup.x - tee_box_pos.x, cup.z - tee_box_pos.z).length()
+	var rise := cup.y - tee_box_pos.y
+	var slope_txt := "level"
+	if absf(rise) >= 0.01:
+		slope_txt = "%d cm %s" % [int(round(absf(rise) * 100.0)), "uphill" if rise > 0.0 else "downhill"]
+	_pin_pill.show_status("%.1f m" % d, "%.0f ft · %s" % [d * 3.28084, slope_txt], Color(1.0, 1.0, 1.0))
+	var side := (cup - head).cross(Vector3.UP).normalized()
+	var dist := head.distance_to(cup)
+	_pin_pill.place(cup + Vector3.UP * 0.55 - side * 0.12 * (dist / 2.0), head)
+	_pin_pill.scale = Vector3.ONE * clampf(dist / 1.0, 1.0, 7.0) # same apparent size at any pin distance
 
 func _speed_label() -> String:
 	var cm = _get_course_manager()
@@ -3016,20 +3176,28 @@ func _speed_label() -> String:
 	var names := {"green": "Green's own", "mat": "My mat", "slow": "Slow", "normal": "Normal", "fast": "Fast"}
 	return "%s · %.1f" % [names.get(green_speed_mode, green_speed_mode), st]
 
+func menu_title() -> String:
+	return _flow.palm_title() if _flow != null else "Practice"
+
 ## Rows of the palm-up hand menu (scripts/ui/hand_menu.gd)
 func menu_items() -> Array:
+	if _flow != null:
+		return _flow.palm_items()
 	return [
 		{"id": "adjust_tee", "title": "Adjust tee", "value": ""},
 		{"id": "speed", "title": "Green speed", "value": _speed_label()},
 		{"id": "pin", "title": "Pin distance", "value": "%.1f m" % pin_distance_m, "stepper": true},
 		{"id": "simulate", "title": "Simulate putt", "value": ""},
 		{"id": "record", "title": "Recording", "value": "On" if _rec_active else "Off"},
+		{"id": "scenery", "title": "Scenery", "value": "Parkland" if scenery_on else "Off"},
 		{"id": "dev", "title": "Developer view", "value": "On" if developer_mode else "Off"},
 	]
 
 func menu_action(id: String) -> void:
 	_record_event("MENU: %s" % id)
 	_play_menu_click()
+	if _flow != null and _flow.palm_action(id):
+		return
 	match id:
 		"adjust_tee":
 			realign_tee()
@@ -3039,6 +3207,10 @@ func menu_action(id: String) -> void:
 			change_pin_distance(-PIN_STEP_M)
 		"pin_plus":
 			change_pin_distance(PIN_STEP_M)
+		"strength_minus":
+			change_putt_distance(-PUTT_DISTANCE_STEP)
+		"strength_plus":
+			change_putt_distance(PUTT_DISTANCE_STEP)
 		"simulate":
 			simulate_putt()
 		"record":
@@ -3046,6 +3218,16 @@ func menu_action(id: String) -> void:
 		"dev":
 			developer_mode = not developer_mode
 			_save_tee_box_settings()
+		"scenery":
+			cycle_scenery()
+			_save_tee_box_settings()
+		"room_edge":
+			cycle_room_edge()
+
+func _apply_scenery() -> void:
+	if test_green_controller != null and test_green_controller.has_method("set_scenery"):
+		test_green_controller.call("set_scenery", scenery_on, scenery_trees)
+	_update_sky_dome_visibility()
 
 func _play_menu_click() -> void:
 	if has_method("_play_lock_chime"):
@@ -3162,6 +3344,11 @@ func toggle_session_recording() -> void:
 	_pulse_haptic(hand_ctrl, golfer_handedness, 0.8, 0.08, "REC start")
 	_record_event("RECORDING started: %s" % path)
 	_record_event("XR status: openxr_active=%s, passthrough=%s" % [is_xr_active, is_passthrough_active])
+	# snapshot of the virtual scene at the start, so a replay knows where the green was before any change
+	if test_green_controller != null and test_green_controller.has_method("scene_info"):
+		_record_quiet("SCENE " + JSON.stringify(test_green_controller.scene_info("rec_start")))
+	_record_quiet("SPLIT " + JSON.stringify({"on": _split_on, "p": [_split_pt.x, _split_pt.y, _split_pt.z], "n": [_split_n.x, _split_n.y, _split_n.z], "inv": _split_inv, "blend": SPLIT_BLEND_M, "fade": _room_edge_fade()}))
+	_record_quiet("DISPLAY: %.0f Hz" % _get_target_refresh_rate())
 
 func _on_recording_stopped(reason: String) -> void:
 	print("[XRController] RECORDING STOPPED (%s) after %.1fs: %s" % [reason, Time.get_ticks_msec() / 1000.0 - _rec_started_s, _rec_dir])
@@ -3432,11 +3619,23 @@ func _apply_environment_transparency(transparent: bool) -> void:
 			env.ambient_light_sky_contribution = 0.85
 			env.ambient_light_energy = 0.45
 
-	# In Mixed Reality, hide artificial SkyDome sphere so real room walls/ceiling/floor show through
-	var sky_dome: Node3D = get_tree().root.find_child("SkyDome", true, false)
-	if sky_dome != null:
-		sky_dome.visible = not transparent
-		print("[XRController] SkyDome visibility set to: ", sky_dome.visible)
+	_update_sky_dome_visibility()
+
+## The SkyDome is split-aware (sky on the virtual side, real room on the other). Without scenery the MR view keeps
+## the real room above the green; with parkland scenery the virtual side needs a sky behind the trees.
+var _sky_dome: Node3D = null
+func _update_sky_dome_visibility() -> void:
+	if _sky_dome == null or not is_instance_valid(_sky_dome):
+		_sky_dome = get_tree().root.find_child("SkyDome", true, false)
+	if _sky_dome == null:
+		return
+	var course_vis := true
+	if test_green_controller != null and "is_course_visible" in test_green_controller:
+		course_vis = bool(test_green_controller.get("is_course_visible"))
+	var want := (not is_passthrough_active) or (scenery_on and course_vis)
+	if _sky_dome.visible != want:
+		_sky_dome.visible = want
+		print("[XRController] SkyDome visibility set to: ", want)
 
 func _collect_split_materials() -> void:
 	_split_materials.clear()
@@ -3468,13 +3667,17 @@ func _traverse_and_collect_materials(node: Node) -> void:
 			if mat is ShaderMaterial:
 				_register_material(mat)
 
+	if node.has_method("get_split_materials"):
+		for m in node.call("get_split_materials"):
+			_register_material(m, true) # uniforms come from an #include, not visible in shader.code
+
 	for child in node.get_children():
 		_traverse_and_collect_materials(child)
 
-func _register_material(mat: ShaderMaterial) -> void:
+func _register_material(mat: ShaderMaterial, force: bool = false) -> void:
 	if mat == null or _split_materials.has(mat):
 		return
-	var has_param := false
+	var has_param := force
 	if mat.get_shader_parameter("enable_split_screen") != null:
 		has_param = true
 	elif mat.shader != null and mat.shader.code.contains("enable_split_screen"):
@@ -3499,6 +3702,9 @@ func _update_virtual_ball_visibility() -> void:
 		golf_ball.visible = false
 
 func _update_material_uniforms(enabled: bool, plane_pt: Vector3, plane_norm: Vector3, div_width: float, invert: bool) -> void:
+	if enabled != _split_on or plane_pt.distance_to(_split_pt) > 0.0005 or plane_norm.distance_to(_split_n) > 0.0005 or invert != _split_inv:
+		_record_quiet("SPLIT " + JSON.stringify({"on": enabled, "p": [snappedf(plane_pt.x, 0.0001), snappedf(plane_pt.y, 0.0001), snappedf(plane_pt.z, 0.0001)],
+			"n": [snappedf(plane_norm.x, 0.0001), snappedf(plane_norm.y, 0.0001), snappedf(plane_norm.z, 0.0001)], "inv": invert, "blend": SPLIT_BLEND_M, "fade": _room_edge_fade()}))
 	_split_on = enabled
 	_split_pt = plane_pt
 	_split_n = plane_norm
@@ -3510,6 +3716,8 @@ func _update_material_uniforms(enabled: bool, plane_pt: Vector3, plane_norm: Vec
 			mat.set_shader_parameter("split_plane_normal", plane_norm)
 			mat.set_shader_parameter("split_divider_width", div_width)
 			mat.set_shader_parameter("split_blend_width", SPLIT_BLEND_M)
+			mat.set_shader_parameter("split_fade_angular", _room_edge_fade())
+			mat.set_shader_parameter("sky_blend_angular", _room_edge_fade())
 			mat.set_shader_parameter("show_split_laser", false)
 			mat.set_shader_parameter("invert_split", invert)
 
@@ -3530,20 +3738,134 @@ func _get_target_refresh_rate() -> float:
 			return rate
 	return 90.0
 
+## Frame-rate counter (2026-09-24): measured from our own frame times over the last second, so a single long frame
+## shows up (Engine.get_frames_per_second() is a 1 s average and hides hitches). Also logged to the recording.
+func _update_fps_chip(delta: float) -> void:
+	_fps_times.append(delta)
+	_fps_t += delta
+	while _fps_times.size() > 1 and _fps_t - _fps_times[0] >= 1.0:
+		_fps_t -= _fps_times[0]
+		_fps_times.remove_at(0)
+	var n := _fps_times.size()
+	if n < 2:
+		return
+	var hz := _get_target_refresh_rate()
+	var budget := 1.0 / hz
+	var worst := 0.0
+	var drops := 0
+	for t in _fps_times:
+		worst = maxf(worst, t)
+		if t > budget * 1.5:
+			drops += 1
+	var fps := float(n) / maxf(_fps_t, 0.001)
+	if _headset_fps_chip != null and _headset_fps_chip.visible:
+		_headset_fps_chip.text = "%d fps  ·  %d Hz\nworst %.1f ms  ·  %d dropped\nscript %.1f ms  ·  %d draws" % [int(round(fps)), int(hz), worst * 1000.0, drops,
+			Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))]
+		if fps >= hz - 2.0 and drops == 0:
+			_headset_fps_chip.modulate = Color(0.35, 1.0, 0.45, 0.95)
+		elif fps >= hz * 0.85:
+			_headset_fps_chip.modulate = Color(1.0, 0.85, 0.25, 0.95)
+		else:
+			_headset_fps_chip.modulate = Color(1.0, 0.35, 0.35, 0.95)
+	_perf_log_t += delta
+	if _perf_log_t >= 2.0:
+		_perf_log_t = 0.0
+		var vp_rid := get_viewport().get_viewport_rid()
+		RenderingServer.viewport_set_measure_render_time(vp_rid, true)
+		_record_quiet("PERF fps=%.1f worst_ms=%.1f dropped=%d hz=%d process_ms=%.2f physics_ms=%.2f draws=%d prims=%d objs=%d render_cpu_ms=%.2f gpu_ms=%.2f" % [
+			fps, worst * 1000.0, drops, int(hz),
+			Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
+			int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)),
+			int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)),
+			RenderingServer.viewport_get_measured_render_time_cpu(vp_rid), RenderingServer.viewport_get_measured_render_time_gpu(vp_rid)])
+
+func apply_performance_settings() -> void:
+	if test_green_controller != null:
+		if test_green_controller.has_method("set_shadows"):
+			test_green_controller.call("set_shadows", shadows_on)
+		if test_green_controller.has_method("set_flow_lines"):
+			test_green_controller.call("set_flow_lines", flow_lines_on)
+	var oxr = xr_interface as OpenXRInterface if xr_interface is OpenXRInterface else null
+	if oxr != null:
+		oxr.foveation_level = foveation_level
+		oxr.foveation_dynamic = foveation_level > 0
+	if oxr != null and absf(oxr.render_target_size_multiplier - render_scale) > 0.001:
+		oxr.render_target_size_multiplier = render_scale # may only take effect on the next start (OpenXR runtime)
+	var rt := xr_interface.get_render_target_size() if xr_interface != null else Vector2.ZERO
+	_record_event("PERF SETTINGS shadows=%s flow_lines=%s foveation=%d (active %s) scenery=%s hz=%.0f render_scale=%.2f eye_buffer=%dx%d" % [
+		shadows_on, flow_lines_on, foveation_level, str(oxr.foveation_level) if oxr != null else "-", scenery_mode(), display_hz, render_scale, int(rt.x), int(rt.y)])
+
+func _apply_display_hz() -> void:
+	apply_performance_settings()
+	_request_perf_levels()
+
+## Ask the Quest for steady high CPU/GPU clocks, and log its thermal warnings (XR_EXT_performance_settings).
+## The 23:48 recording ran slower than 23:35 with the same settings and view; a hot headset lowering its clocks
+## would do that, and these notifications will show it.
+var _perf_levels_set := false
+func _request_perf_levels() -> void:
+	var oxr = xr_interface as OpenXRInterface if xr_interface is OpenXRInterface else null
+	if oxr == null or _perf_levels_set:
+		return
+	_perf_levels_set = true
+	oxr.set_cpu_level(OpenXRInterface.PERF_SETTINGS_LEVEL_SUSTAINED_HIGH)
+	oxr.set_gpu_level(OpenXRInterface.PERF_SETTINGS_LEVEL_SUSTAINED_HIGH)
+	if not oxr.cpu_level_changed.is_connected(_on_cpu_level_changed):
+		oxr.cpu_level_changed.connect(_on_cpu_level_changed)
+	if not oxr.gpu_level_changed.is_connected(_on_gpu_level_changed):
+		oxr.gpu_level_changed.connect(_on_gpu_level_changed)
+	_record_event("PERF LEVELS requested: cpu+gpu sustained high, foveation supported=%s" % oxr.is_foveation_supported())
+
+func _on_cpu_level_changed(sub_domain: int, from_level: int, to_level: int) -> void:
+	_record_event("THERMAL cpu domain=%d level %d -> %d (0 normal, 1 warning, 2 impaired)" % [sub_domain, from_level, to_level])
+
+func _on_gpu_level_changed(sub_domain: int, from_level: int, to_level: int) -> void:
+	_record_event("THERMAL gpu domain=%d level %d -> %d (0 normal, 1 warning, 2 impaired)" % [sub_domain, from_level, to_level])
+	var oxr = xr_interface as OpenXRInterface if xr_interface is OpenXRInterface else null
+	if oxr != null and display_hz in available_refresh_rates() and absf(oxr.get_display_refresh_rate() - display_hz) > 0.5:
+		oxr.set_display_refresh_rate(display_hz)
+		print("[XRController] Display refresh rate -> %.0f Hz (saved setting)" % display_hz)
+
+func available_refresh_rates() -> Array:
+	var oxr = xr_interface as OpenXRInterface if xr_interface is OpenXRInterface else null
+	var out := []
+	if oxr != null:
+		for r in oxr.get_available_display_refresh_rates():
+			out.append(float(r))
+	out.sort()
+	return out
+
+## Settings: step to the next available refresh rate (72 -> 90 -> 120 -> 72 on Quest 3).
+func cycle_refresh_rate() -> void:
+	var rates := available_refresh_rates()
+	if rates.is_empty():
+		rates = [72.0, 90.0, 120.0]
+	var i := 0
+	for k in rates.size():
+		if absf(rates[k] - display_hz) < 0.5:
+			i = k
+	display_hz = rates[(i + 1) % rates.size()]
+	var oxr = xr_interface as OpenXRInterface if xr_interface is OpenXRInterface else null
+	if oxr != null:
+		oxr.set_display_refresh_rate(display_hz)
+	_record_event("DISPLAY: %.0f Hz requested" % display_hz)
+	_save_tee_box_settings()
+
 func _setup_headset_fps_chip() -> void:
 	if _headset_fps_chip == null and xr_camera != null:
 		_headset_fps_chip = Label3D.new()
 		_headset_fps_chip.name = "HeadsetFpsChip"
 		_headset_fps_chip.text = "FPS: 90"
-		_headset_fps_chip.font_size = 14
-		_headset_fps_chip.pixel_size = 0.00045
+		_headset_fps_chip.font = preload("res://scripts/ui/status_pill.gd").msdf_font("Inter-SemiBold")
+		_headset_fps_chip.font_size = 20
+		_headset_fps_chip.pixel_size = 0.0004
 		_headset_fps_chip.no_depth_test = true
 		_headset_fps_chip.render_priority = 110
 		_headset_fps_chip.outline_size = 4
 		_headset_fps_chip.outline_modulate = Color(0.0, 0.0, 0.0, 0.95)
 		_headset_fps_chip.modulate = Color(0.35, 1.0, 0.45, 0.95)
 		# Peripheral HUD position (upper left, comfortable viewing distance)
-		_headset_fps_chip.position = Vector3(-0.20, 0.13, -0.55)
+		_headset_fps_chip.position = Vector3(-0.17, 0.12, -0.55)
 		xr_camera.add_child(_headset_fps_chip)
 
 func _setup_wrist_hud() -> void:
@@ -3636,6 +3958,13 @@ func _show_notice(text: String, seconds: float = 3.0, color: Color = Color(1.0, 
 	_notice_text = text
 	_notice_t = seconds
 
+## Recording only (no console / putt log): high-rate diagnostics like PERF and SCENE
+func _record_quiet(evt_text: String) -> void:
+	if _rec_active:
+		var rb = _get_bridge_class()
+		if rb != null:
+			rb.recordEvent(JSON.stringify({"type": "game", "text": evt_text, "state": _ball_tracking_state_to_str()}))
+
 func _record_event(evt_text: String) -> void:
 	if _rec_active:
 		var rb = _get_bridge_class()
@@ -3657,7 +3986,7 @@ func _update_debug_hud(delta: float, rt: float, rg: float, lt: float, lg: float,
 	var target_hz: float = _get_target_refresh_rate()
 	
 	# Update in-headset peripheral FPS chip
-	if _headset_fps_chip != null:
+	if false and _headset_fps_chip != null: # the chip is driven by _update_fps_chip() every frame now
 		_headset_fps_chip.text = "%d FPS (%.1f ms) • Target %d Hz" % [fps, frame_ms, int(target_hz)]
 		if fps >= int(target_hz) - 2:
 			_headset_fps_chip.modulate = Color(0.35, 1.0, 0.45, 0.92) # Green: Optimal Store Quality
@@ -3757,6 +4086,8 @@ func _on_controller_button_pressed(button_name: String, hand: String) -> void:
 		_hand_menu.toggle_pinned(hp, hf)
 		_record_event("MENU: toggled with the menu button (%s)" % hand)
 		return
+	if _flow != null and current_flow_state == GameFlowState.MAIN_MENU:
+		return # the glass menu takes its input itself (poke / ray + pinch or trigger)
 	if current_flow_state == GameFlowState.MAIN_MENU:
 		if button_name == "ax_button" or button_name == "trigger_click":
 			_show_stance_selection_page()
@@ -3917,6 +4248,8 @@ func confirm_tee_placement() -> void:
 	_pulse_haptic(left_controller, "left", 0.85, 0.12, "Tee Confirmed")
 	_record_event("Tee Placement Confirmed! Putting Green Active.")
 	print("[XRController] TEE PLACEMENT CONFIRMED: Course visible, virtual hands hidden, ball tracking circle active.")
+	if _flow != null:
+		_flow.call_deferred("on_spot_confirmed")
 
 func realign_tee() -> void:
 	_start_tee_calibration()
@@ -4005,6 +4338,17 @@ func _save_tee_box_settings() -> void:
 	cfg.set_value("player", "green_speed", green_speed_mode)
 	cfg.set_value("player", "pin_distance", pin_distance_m)
 	cfg.set_value("player", "developer_mode", developer_mode)
+	cfg.set_value("player", "scenery", scenery_on)
+	cfg.set_value("player", "scenery_trees", scenery_trees)
+	cfg.set_value("player", "room_edge", room_edge)
+	cfg.set_value("player", "putt_distance", putt_distance_pct)
+	cfg.set_value("player", "auto_record", auto_record_sessions)
+	cfg.set_value("player", "show_fps", show_fps)
+	cfg.set_value("player", "display_hz", display_hz)
+	cfg.set_value("perf", "shadows", shadows_on)
+	cfg.set_value("perf", "flow_lines", flow_lines_on)
+	cfg.set_value("perf", "foveation", foveation_level)
+	cfg.set_value("perf", "render_scale", render_scale)
 	cfg.save("user://tee_box_settings.cfg")
 	print("[XRController] TEE BOX & PROFILE SAVED: pos=%s, rot=%.1f deg, confirmed=%s, stance=%s, welcome_done=%s, split_offset_z=%.2f" % [tee_box_pos, tee_box_rotation_deg, is_tee_confirmed, golfer_handedness, has_completed_welcome, world_split_offset_z])
 
@@ -4026,12 +4370,25 @@ func _load_tee_box_settings() -> void:
 		is_tee_confirmed = cfg.get_value("tee_box", "confirmed", false)
 		golfer_handedness = cfg.get_value("player", "handedness", "right")
 		has_completed_welcome = cfg.get_value("player", "completed_welcome", false)
-		world_split_offset_z = cfg.get_value("split", "offset_z", 0.30)
-		if is_equal_approx(world_split_offset_z, 0.45):
-			world_split_offset_z = 0.30 # old default -> new default (green starts 30 cm past the ball)
+		world_split_offset_z = cfg.get_value("split", "offset_z", 0.20)
+		if is_equal_approx(world_split_offset_z, 0.45) or is_equal_approx(world_split_offset_z, 0.30):
+			world_split_offset_z = 0.20 # old defaults -> new default (green starts 20 cm past the ball)
 		green_speed_mode = cfg.get_value("player", "green_speed", "green")
 		pin_distance_m = clampf(float(cfg.get_value("player", "pin_distance", 2.4)), PIN_MIN_M, 8.0)
 		developer_mode = bool(cfg.get_value("player", "developer_mode", developer_mode))
+		scenery_on = bool(cfg.get_value("player", "scenery", true))
+		scenery_trees = bool(cfg.get_value("player", "scenery_trees", true))
+		room_edge = str(cfg.get_value("player", "room_edge", room_edge))
+		putt_distance_pct = clampi(int(cfg.get_value("player", "putt_distance", putt_distance_pct)), PUTT_DISTANCE_MIN, PUTT_DISTANCE_MAX)
+		if not ROOM_EDGES.has(room_edge):
+			room_edge = "soft"
+		auto_record_sessions = bool(cfg.get_value("player", "auto_record", auto_record_sessions))
+		show_fps = bool(cfg.get_value("player", "show_fps", show_fps))
+		display_hz = float(cfg.get_value("player", "display_hz", display_hz))
+		shadows_on = bool(cfg.get_value("perf", "shadows", shadows_on))
+		flow_lines_on = bool(cfg.get_value("perf", "flow_lines", flow_lines_on))
+		foveation_level = int(cfg.get_value("perf", "foveation", foveation_level))
+		render_scale = float(cfg.get_value("perf", "render_scale", render_scale))
 		invert_split = false
 		print("[XRController] TEE BOX & PROFILE LOADED: pos=%s, rot=%.1f deg, confirmed=%s, stance=%s, welcome_done=%s, split_offset_z=%.2f" % [tee_box_pos, tee_box_rotation_deg, is_tee_confirmed, golfer_handedness, has_completed_welcome, world_split_offset_z])
 	else:
@@ -4040,10 +4397,11 @@ func _load_tee_box_settings() -> void:
 		is_tee_confirmed = false
 		golfer_handedness = "right"
 		has_completed_welcome = false
-		world_split_offset_z = 0.30
+		world_split_offset_z = 0.20
 		invert_split = false
 	
 	call_deferred("_apply_initial_tee_state")
+	call_deferred("_apply_scenery")
 
 func _notify_course_alignment() -> void:
 	if test_green_controller != null and test_green_controller.has_method("align_to_tee_box"):
@@ -4052,9 +4410,115 @@ func _notify_course_alignment() -> void:
 	_apply_active_plane()
 
 # -----------------------------------------------------------------------------
+# Game flow host API (scripts/gameplay/game_flow.gd, 2026-09-23)
+# -----------------------------------------------------------------------------
+func _flow_boot() -> void:
+	if _flow == null:
+		_show_main_menu()
+		return
+	if game_menu == null and test_green_controller != null:
+		game_menu = test_green_controller.get_node_or_null("GameMenu")
+	_flow.boot()
+	get_tree().create_timer(1.2).timeout.connect(_prewarm)
+
+## One-off warm-up while the first menu is up (2026-09-24). The 23:35 recording showed a ~130 ms freeze the first
+## time the green, the parkland and the palm menu appeared: the headset prepares each new shader and each new text
+## size on first use. Doing it here, hidden, moves that wait to a moment where nothing moves.
+var _prewarmed := false
+func _prewarm() -> void:
+	if _prewarmed or current_flow_state != GameFlowState.MAIN_MENU:
+		return
+	_prewarmed = true
+	var t0 := Time.get_ticks_msec()
+	# texts: palm menu, result cards, pills (glyphs are rasterised the first time a size is used)
+	if _hand_menu != null and _hand_menu.has_method("prewarm"):
+		_hand_menu.prewarm()
+	if _practice != null and _practice.has_method("prewarm"):
+		_practice.prewarm()
+	if _flow != null and _flow.has_method("prewarm"):
+		_flow.prewarm()
+	for pill in [_status_pill, _pin_pill]:
+		if pill != null:
+			pill.show_status("Ready 0123456789", "Place the ball on the spot · 11 ft · 5 cm uphill downhill", Color.WHITE)
+			pill.hide_status()
+	# the course: drawn for a few frames right in front of the viewer. The menu's split plane makes every one of
+	# those pixels transparent (you keep seeing your room), but the shaders get prepared.
+	var tgc = test_green_controller
+	if tgc == null or tgc.green_generator == null or xr_camera == null:
+		return
+	var gg: Node3D = tgc.green_generator
+	var keep: Transform3D = gg.global_transform
+	var fwd := -xr_camera.global_transform.basis.z
+	fwd.y = 0.0
+	fwd = fwd.normalized() if fwd.length() > 0.1 else Vector3(0, 0, -1)
+	tgc.set_scenery(true, true)
+	if tgc.parkland != null and tgc.parkland.has_method("set_prewarm"):
+		tgc.parkland.set_prewarm(true)
+	tgc.set_course_visible(true)
+	if tgc.flag_assembly != null:
+		tgc.flag_assembly.visible = false
+	gg.global_transform = Transform3D(Basis.IDENTITY, xr_camera.global_position + fwd * 5.0 + Vector3.DOWN * 1.5)
+	for i in 4:
+		await get_tree().process_frame
+	gg.global_transform = keep
+	if tgc.parkland != null and tgc.parkland.has_method("set_prewarm"):
+		tgc.parkland.set_prewarm(false)
+	if current_flow_state == GameFlowState.MAIN_MENU:
+		tgc.set_course_visible(false)
+	_apply_scenery()
+	_notify_course_alignment()
+	print("[XRController] Prewarm done in %d ms" % (Time.get_ticks_msec() - t0))
+	_record_event("PREWARM done (%d ms)" % (Time.get_ticks_msec() - t0))
+
+func flow_head() -> Vector3:
+	return xr_camera.global_position if xr_camera != null else global_position + Vector3(0, 1.6, 0)
+
+func flow_forward() -> Vector3:
+	return -xr_camera.global_transform.basis.z if xr_camera != null else Vector3(0, 0, -1)
+
+## Menus: the course goes away, the room is fully visible, nothing on the floor reacts.
+func flow_enter_menu() -> void:
+	current_flow_state = GameFlowState.MAIN_MENU
+	if test_green_controller != null and test_green_controller.has_method("set_course_visible"):
+		test_green_controller.set_course_visible(false)
+	set_split_mode(SplitMode.FULL_PASSTHROUGH)
+	if _tee_box_marker != null:
+		_tee_box_marker.visible = false
+	if game_menu != null and game_menu.visible:
+		game_menu.call("hide_menu")
+	_hide_laser_guide()
+	if _status_pill != null:
+		_status_pill.hide_status()
+	if _pin_pill != null:
+		_pin_pill.hide_status()
+
+## Play on the saved ball spot (no alignment step): course visible, split view, ball tracking on the spot.
+func flow_start_play() -> void:
+	current_flow_state = GameFlowState.PUTTING_GAMEPLAY
+	if _tee_calibration_root != null: _tee_calibration_root.visible = false
+	if _tee_ball_spot_root != null: _tee_ball_spot_root.visible = true
+	if _tee_confirm_btn != null: _tee_confirm_btn.visible = false
+	_hide_laser_guide()
+	if test_green_controller != null and test_green_controller.has_method("set_course_visible"):
+		test_green_controller.set_course_visible(true)
+	_notify_course_alignment()
+	set_split_mode(SplitMode.SPLIT_SCREEN)
+	_apply_active_plane()
+	if ball_tracking_state != BallTrackingState.BALL_ROLLING:
+		reset_putting_ball()
+	if _record_session_requested and not _rec_active:
+		toggle_session_recording()
+
+func flow_realign() -> void:
+	_start_tee_calibration()
+
+# -----------------------------------------------------------------------------
 # Game Menu 3D Spatial UI & Stance Selection
 # -----------------------------------------------------------------------------
 func _show_main_menu() -> void:
+	if _flow != null:
+		_flow.call("_show", "home")
+		return
 	current_flow_state = GameFlowState.MAIN_MENU
 	if test_green_controller != null and test_green_controller.has_method("set_course_visible"):
 		test_green_controller.set_course_visible(false)
@@ -4246,7 +4710,9 @@ func _save_calibration_bundle() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
-		if current_flow_state == GameFlowState.MAIN_MENU:
+		if current_flow_state == GameFlowState.MAIN_MENU and _flow != null:
+			pass
+		elif current_flow_state == GameFlowState.MAIN_MENU:
 			if event.keycode == KEY_SPACE or event.keycode == KEY_ENTER or event.keycode == KEY_P:
 				_show_stance_selection_page()
 				return
